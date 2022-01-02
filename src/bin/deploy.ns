@@ -1,0 +1,49 @@
+/**
+ * @param 0 filename
+ * @param 1... args to filename
+ */
+import { deploy, undeploy } from "/lib/file.ns";
+import { isHackable } from "/lib/hack.ns";
+import { serverHasEnoughMemForScript } from "/lib/mem.ns";
+import { gainRootAccess } from "/lib/root.ns";
+
+var visited = {};
+
+/** @param {NS} ns **/
+export async function main(ns) {
+    // Clear out saved var from last time
+    visited = {};
+
+    var filename = ns.args[0];
+    var fileArgs = ns.args.slice(1);
+    ns.tprint(`beginning deployment for ${filename} with args=${JSON.stringify(fileArgs)}`);
+    await recursiveDeploy(ns, filename, "home", fileArgs);
+}
+
+/** @param {NS} ns **/
+async function recursiveDeploy(ns, filename, hostname, fileArgs) {
+    if (visited[hostname] === true) {
+        return;
+    }
+    visited[hostname] = true;
+
+    ns.tprint(`working on ${filename} on ${hostname}`);
+
+    if (hostname !== "home" && isDeployableHost(ns, filename, hostname)) {
+        undeploy(ns, filename, hostname);
+        await deploy(ns, filename, hostname, fileArgs);
+    }
+
+    var remoteHosts = ns.scan(hostname);
+    for (var i in remoteHosts) {
+        var remoteHost = remoteHosts[i];
+        await recursiveDeploy(ns, filename, remoteHost, fileArgs);
+    }
+}
+
+/** @param {NS} ns **/
+function isDeployableHost(ns, filename, hostname) {
+    return (
+        isHackable(ns, hostname) && serverHasEnoughMemForScript(ns, filename, hostname) && gainRootAccess(ns, hostname)
+    );
+}

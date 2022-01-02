@@ -1,0 +1,34 @@
+/** @param {NS} ns **/
+export async function main(ns) {
+    var serverMonies = new Map();
+    getEveryAccessibleServerMonies(ns, serverMonies);
+    ns.tprint(JSON.stringify(Array.from(serverMonies.entries())));
+}
+
+/**
+ * @param {NS} ns
+ * @param {Map.<string, number>}
+ */
+export function getEveryAccessibleServerMonies(ns, serverMonies) {
+    recursiveBankCheck(ns, "home", serverMonies);
+    serverMonies.delete("home"); // :)
+}
+
+/**
+ * @param {NS} ns
+ * @param {String} hostname
+ * @param {Map.<string, number>} serverMonies
+ */
+function recursiveBankCheck(ns, hostname, serverMonies) {
+    if (serverMonies.has(hostname)) {
+        return;
+    }
+
+    serverMonies.set(hostname, ns.getServerMaxMoney(hostname) || 0);
+
+    var remoteHosts = ns.scan(hostname);
+    for (var i in remoteHosts) {
+        var remoteHost = remoteHosts[i];
+        recursiveBankCheck(ns, remoteHost, serverMonies);
+    }
+}

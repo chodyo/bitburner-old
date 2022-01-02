@@ -1,0 +1,38 @@
+/** @param {NS} ns **/
+export function main(ns) {
+    var hostname = ns.args[0];
+    gainRootAccess(ns, hostname);
+}
+
+/** @param {NS} ns **/
+export function gainRootAccess(ns, hostname) {
+    if (ns.hasRootAccess(hostname)) {
+        return true;
+    }
+
+    openPorts(ns, hostname);
+
+    ns.tprint(`attempting to nuke ${hostname}`);
+    try {
+        ns.nuke(hostname);
+    } catch (e) {
+        ns.tprint(`failed to gain root access for host=${hostname}; error=${e}`);
+        return false;
+    }
+    return true;
+}
+
+/** @param {NS} ns **/
+export function openPorts(ns, hostname) {
+    [
+        { fn: ns.brutessh, requirement: "BruteSSH.exe" },
+        { fn: ns.ftpcrack, requirement: "FTPCrack.exe" },
+        { fn: ns.relaysmtp, requirement: "relaySMTP.exe" },
+        { fn: ns.httpworm, requirement: "HTTPWorm.exe" },
+        { fn: ns.sqlinject, requirement: "SQLInject.exe" },
+    ].forEach((portOpener) => {
+        if (ns.fileExists(portOpener.requirement)) {
+            portOpener.fn(hostname);
+        }
+    });
+}

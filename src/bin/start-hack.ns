@@ -1,5 +1,6 @@
 import { getEveryAccessibleServerMonies } from "/lib/money.ns";
 import { gainRootAccess } from "/lib/root.ns";
+import { isHackable } from "/lib/hack.ns";
 
 /** @param {NS} ns **/
 export async function main(ns) {
@@ -15,7 +16,7 @@ export async function main(ns) {
     var serverMonies = new Map();
     getEveryAccessibleServerMonies(ns, serverMonies);
     serverMonies.forEach((potentialValue, potentialTarget) => {
-        if (potentialValue > maxMoney && gainRootAccess(ns, potentialTarget)) {
+        if (potentialValue > maxMoney && isHackable(ns, potentialTarget) && gainRootAccess(ns, potentialTarget)) {
             target = potentialTarget;
             maxMoney = potentialValue;
         }

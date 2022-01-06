@@ -1,9 +1,0 @@
-/** @param {NS} ns **/
-export function isHackable(ns, hostname) {
-    var requiredHackingLevel = ns.getServerRequiredHackingLevel(hostname);
-    var myHackingLevel = ns.getHackingLevel();
-    if (requiredHackingLevel > myHackingLevel) {
-        return false;
-    }
-    return true;
-}

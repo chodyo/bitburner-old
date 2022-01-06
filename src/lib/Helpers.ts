@@ -1,4 +1,5 @@
-import {NS} from "Bitburner";
+import { NS } from "Bitburner";
+import { Logger } from "./Logger";
 
 const ReadText = {
     readLines(ns: NS, file: string): string[] {
@@ -6,15 +7,13 @@ const ReadText = {
     },
 
     readNonEmptyLines(ns: NS, file: string): string[] {
-        return ReadText.readLines(ns, file).filter(
-            (x) => x.trim() != ""
-        );
+        return ReadText.readLines(ns, file).filter((x) => x.trim() != "");
     },
 };
 
 const DownloadFiles = {
     async getfileToHome(ns: NS, source: string, dest: string) {
-        const logger = new TermLogger(ns);
+        const logger = new Logger(ns);
         logger.info(`Downloading ${source} -> ${dest}`);
 
         if (!(await ns.wget(source, dest, "home"))) {
@@ -22,34 +21,6 @@ const DownloadFiles = {
         }
     },
 };
-
-class TermLogger {
-    static INFO_LITERAL = "INFO   >";
-    static WARN_LITERAL = "WARN   >";
-    static ERR_LITERAL = "ERROR  >";
-    static TRACE_LITERAL = "TRACE  >";
-    ns: NS;
-
-    constructor(ns: NS) {
-        this.ns = ns;
-    }
-
-    info(msg: string, ...args: string[]) {
-        this.ns.tprintf(`${TermLogger.INFO_LITERAL} ${msg}`, ...args);
-    }
-
-    warn(msg: string, ...args: string[]) {
-        this.ns.tprintf(`${TermLogger.WARN_LITERAL} ${msg}`, ...args);
-    }
-
-    err(msg: string, ...args: string[]) {
-        this.ns.tprintf(`${TermLogger.ERR_LITERAL} ${msg}`, ...args);
-    }
-
-    log(msg: string, ...args: string[]) {
-        this.ns.tprintf(`${TermLogger.TRACE_LITERAL} ${msg}`, ...args);
-    }
-}
 
 interface RepoSettings {
     baseUrl: string;
@@ -63,9 +34,9 @@ const repoSettings: RepoSettings = {
 
 class RepoInit {
     ns: NS;
-    logger: TermLogger;
+    logger: Logger;
 
-    constructor(ns: NS, logger: TermLogger = new TermLogger(ns)) {
+    constructor(ns: NS, logger: Logger = new Logger(ns)) {
         this.ns = ns;
         this.logger = logger;
     }
@@ -73,9 +44,9 @@ class RepoInit {
     private static getSourceDestPair(line: string): { source: string; dest: string } | null {
         return line.startsWith("./")
             ? {
-                source: `${repoSettings.baseUrl}${line.substring(1)}`,
-                dest: line.substring(1),
-            }
+                  source: `${repoSettings.baseUrl}${line.substring(1)}`,
+                  dest: line.substring(1),
+              }
             : null;
     }
 
@@ -89,18 +60,11 @@ class RepoInit {
 
         this.logger.info(`Getting manifest...`);
 
-        await DownloadFiles.getfileToHome(
-            this.ns,
-            manifestUrl,
-            repoSettings.manifestPath
-        );
+        await DownloadFiles.getfileToHome(this.ns, manifestUrl, repoSettings.manifestPath);
     }
 
     async downloadAllFiles() {
-        const files = ReadText.readNonEmptyLines(
-            this.ns,
-            repoSettings.manifestPath
-        );
+        const files = ReadText.readNonEmptyLines(this.ns, repoSettings.manifestPath);
 
         this.logger.info(`Contents of manifest:`);
         this.logger.info(`\t${files}`);
@@ -117,4 +81,4 @@ class RepoInit {
     }
 }
 
-export {ReadText, TermLogger, RepoInit, DownloadFiles};
+export { ReadText, RepoInit, DownloadFiles };

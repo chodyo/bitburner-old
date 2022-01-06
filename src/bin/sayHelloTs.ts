@@ -1,9 +1,9 @@
-import {NS} from "Bitburner";
-import {TermLogger} from "/lib/Helpers";
+import { NS } from "Bitburner";
+import { Logger } from "/lib/Logger";
 
 /** @param {NS} ns **/
 export async function main(ns: NS) {
-    const logger = new TermLogger(ns);
+    const logger = new Logger(ns);
 
     logger.log("Hello from TypeScript o/");
     logger.info("\tEverything seems to be in order :D");

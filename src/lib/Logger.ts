@@ -11,19 +11,19 @@ class Logger {
         this.ns = ns;
     }
 
-    trace(msg: string, ...args: string[]) {
+    trace(msg: string, ...args: any[]) {
         this.log(msg, this.caller(), Logger.TRACE_LITERAL, args);
     }
 
-    info(msg: string, ...args: string[]) {
+    info(msg: string, ...args: any[]) {
         this.log(msg, this.caller(), Logger.INFO_LITERAL, args);
     }
 
-    warn(msg: string, ...args: string[]) {
+    warn(msg: string, ...args: any[]) {
         this.log(msg, this.caller(), Logger.WARN_LITERAL, args);
     }
 
-    err(msg: string, ...args: string[]) {
+    err(msg: string, ...args: any[]) {
         this.log(msg, this.caller(), Logger.ERR_LITERAL, args);
     }
 
@@ -40,8 +40,14 @@ class Logger {
         }
     }
 
-    private log(msg: string, caller: string, level: string, args: string[]) {
-        this.ns.tprintf(`${level.padEnd(6)} > ${caller.padEnd(20)} msg::${msg}`, ...args);
+    private log(msg: string, caller: string, level: string, args: any[]) {
+        for (let i in args) {
+            args[i] = JSON.stringify(args[i]);
+        }
+        level = level.padEnd(6);
+        const date = new Date().toLocaleTimeString("en-US", { hour12: false }).padEnd(8);
+        caller = caller.padEnd(20);
+        this.ns.tprintf(`${level} >  ${date}  >  ${caller}  >  ${msg} ${args}`);
     }
 }
 

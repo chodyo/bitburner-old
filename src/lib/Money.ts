@@ -1,25 +1,22 @@
-/** @param {NS} ns **/
-export async function main(ns) {
+import { NS } from "Bitburner";
+
+export async function main(ns: NS) {
     var serverMonies = new Map();
     getEveryAccessibleServerMonies(ns, serverMonies);
     ns.tprint(JSON.stringify(Array.from(serverMonies.entries())));
 }
 
-/**
- * @param {NS} ns
- * @param {Map.<string, number>}
- */
-export function getEveryAccessibleServerMonies(ns, serverMonies) {
+export function desiredSavings(ns: NS) {
+    var myHackLevel = ns.getPlayer().hacking;
+    return Math.pow(myHackLevel, 1.5) * 10000; // 1 => 10k; 10 => 320k; 20 => 890k; 50 => 3.5m; 100 => 10m; 237 => 36m
+}
+
+export function getEveryAccessibleServerMonies(ns: NS, serverMonies: Map<string, number>) {
     recursiveBankCheck(ns, "home", serverMonies);
     serverMonies.delete("home"); // :)
 }
 
-/**
- * @param {NS} ns
- * @param {String} hostname
- * @param {Map.<string, number>} serverMonies
- */
-function recursiveBankCheck(ns, hostname, serverMonies) {
+function recursiveBankCheck(ns: NS, hostname: string, serverMonies: Map<string, number>) {
     if (serverMonies.has(hostname)) {
         return;
     }
@@ -31,4 +28,9 @@ function recursiveBankCheck(ns, hostname, serverMonies) {
         var remoteHost = remoteHosts[i];
         recursiveBankCheck(ns, remoteHost, serverMonies);
     }
+}
+
+export function getHighestRate(ns: NS) {
+    // TODO
+    // ns.getPlayer()
 }

@@ -1,11 +1,14 @@
-/** @param {NS} ns **/
-export function main(ns) {
+import { NS } from "Bitburner";
+
+export function main(ns: NS) {
     var hostname = ns.args[0];
-    gainRootAccess(ns, hostname);
+    gainRootAccess(ns, hostname.toString());
 }
 
-/** @param {NS} ns **/
-export function gainRootAccess(ns, hostname) {
+/**
+ * @description Opens as many ports as it can and then tries to nuke.
+ */
+export function gainRootAccess(ns: NS, hostname: string) {
     if (ns.hasRootAccess(hostname)) {
         return true;
     }
@@ -22,8 +25,7 @@ export function gainRootAccess(ns, hostname) {
     return true;
 }
 
-/** @param {NS} ns **/
-export function openPorts(ns, hostname) {
+function openPorts(ns: NS, hostname: string) {
     [
         { fn: ns.brutessh, requirement: "BruteSSH.exe" },
         { fn: ns.ftpcrack, requirement: "FTPCrack.exe" },

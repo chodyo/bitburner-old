@@ -17,7 +17,7 @@ const DownloadFiles = {
         logger.info(`Downloading ${source} -> ${dest}`);
 
         if (!(await ns.wget(source, dest, "home"))) {
-            logger.err(`\tFailed retrieving ${source} -> ${dest}`);
+            logger.error(`\tFailed retrieving ${source} -> ${dest}`);
         }
     },
 };
@@ -73,7 +73,7 @@ class RepoInit {
             const pair = RepoInit.getSourceDestPair(file);
 
             if (!pair) {
-                this.logger.err(`Could not read line ${file}`);
+                this.logger.error(`Could not read line ${file}`);
             } else {
                 await DownloadFiles.getfileToHome(this.ns, pair.source, pair.dest);
             }

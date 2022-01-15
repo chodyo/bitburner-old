@@ -8,5 +8,5 @@ export async function main(ns: NS) {
     logger.trace("Hello from TypeScript o/");
     logger.info("\tEverything seems to be in order :D");
     logger.warn("\tJust showing some colors");
-    logger.err("Fake error, no panik");
+    logger.error("Fake error, no panik");
 }

@@ -69,7 +69,7 @@ class RepoInit {
         this.logger.info(`Contents of manifest:`);
         this.logger.info(`\t${files}`);
 
-        for (let file of files) {
+        for (const file of files) {
             const pair = RepoInit.getSourceDestPair(file);
 
             if (!pair) {

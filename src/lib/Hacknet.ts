@@ -1,28 +1,31 @@
 import { NS } from "Bitburner";
 import { desiredSavings } from "lib/Money";
+import { Logger } from "lib/Logger";
 
 export async function main(ns: NS) {
-    while (buyCheapestUpgrade(ns, desiredSavings(ns))) {
-        await ns.sleep(3000);
-    }
+    buyCheapestUpgrade(ns, desiredSavings(ns));
 }
 
 export function buyCheapestUpgrade(ns: NS, maxMoneyKeep: number) {
-    var cheapest = {
+    const logger = new Logger(ns);
+
+    const cheapest = {
         cost: Infinity,
-        runUpgradeFn: (index: number, n: number) => {},
+        runUpgradeFn: function noUpgrade(_index: number, _n: number) {
+            return;
+        },
         upgradeFnParam: 0,
     };
 
     if (ns.hacknet.numNodes() < ns.hacknet.maxNumNodes()) {
-        var newNodeCost = ns.hacknet.getPurchaseNodeCost();
-        if (!cheapest.cost || newNodeCost < cheapest.cost) {
+        const newNodeCost = ns.hacknet.getPurchaseNodeCost();
+        if (newNodeCost < cheapest.cost) {
             cheapest.cost = newNodeCost;
             cheapest.runUpgradeFn = ns.hacknet.purchaseNode;
         }
     }
 
-    for (var i = 0; i < ns.hacknet.numNodes(); i++) {
+    for (let i = 0; i < ns.hacknet.numNodes(); i++) {
         [
             { cost: ns.hacknet.getRamUpgradeCost(i, 1), upgradeFn: ns.hacknet.upgradeRam },
             { cost: ns.hacknet.getCoreUpgradeCost(i, 1), upgradeFn: ns.hacknet.upgradeCore },
@@ -37,10 +40,10 @@ export function buyCheapestUpgrade(ns: NS, maxMoneyKeep: number) {
         });
     }
 
-    if (!cheapest.cost) {
+    if (cheapest.cost === Infinity) {
         return false;
     } else if (ns.getServerMoneyAvailable("home") >= cheapest.cost + maxMoneyKeep) {
-        ns.tprint(`upgrading ${cheapest.runUpgradeFn.name} ${cheapest.upgradeFnParam}`);
+        logger.info("upgrading hacknet", cheapest.runUpgradeFn.name, cheapest.upgradeFnParam);
         cheapest.runUpgradeFn(cheapest.upgradeFnParam, 1);
     }
     return true;

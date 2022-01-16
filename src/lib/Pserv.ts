@@ -1,75 +1,86 @@
 import { NS } from "Bitburner";
 import { deploy } from "lib/Deploy";
-import { getTarget, getParams } from "lib/Hack";
+import { getTarget, getParams, hackFilePath } from "lib/Hack";
+import { Logger } from "/lib/Logger";
+import { $ } from "/lib/Money";
+import { GB } from "/lib/Mem";
 
 export async function main(ns: NS) {
-    ns.enableLog("ALL");
-    buyPservUpgrade(ns);
+    await buyPservUpgrade(ns);
 }
 
 export async function buyPservUpgrade(ns: NS) {
-    var limit = ns.getPurchasedServerLimit();
-    var myPservCount = ns.getPurchasedServers().length;
+    const logger = new Logger(ns);
 
-    var dollarsPerGig = 55000; // i think? just based on the store page
-    var myCash = ns.getServerMoneyAvailable("home");
-    var maxRam = Math.floor(myCash / dollarsPerGig);
-    var bitPos = 0;
+    const limit = ns.getPurchasedServerLimit();
+    const myPservs = ns
+        .getPurchasedServers()
+        .map((pserv) => {
+            return {
+                hostname: pserv,
+                ram: ns.getServerMaxRam(pserv),
+            };
+        })
+        .sort((a, b) => a.ram - b.ram);
+
+    const dollarsPerGig = 55000; // i think? just based on the store pages
+    const myCash = ns.getServerMoneyAvailable("home");
+    let maxRam = Math.floor(myCash / dollarsPerGig);
+    if (maxRam < 8) {
+        // kinda pointless
+        logger.trace("can't buy more than 8gb ram", ns.nFormat(myCash, $), ns.nFormat(maxRam * 1e9, GB));
+        return;
+    }
+
+    let bitPos = 0;
     while (maxRam !== 0) {
         bitPos++;
         maxRam >>= 1;
     }
     maxRam = Math.pow(2, bitPos - 1);
-    if (maxRam < 8) {
-        // kinda pointless
-        ns.tprint(`can't buy more than 8gb ram myCash=${myCash} maxRam=${maxRam}`);
+
+    const ram = Math.min(maxRam, ns.getPurchasedServerMaxRam());
+
+    if (myPservs[0].ram >= ram) {
         return;
     }
 
-    ns.tprint(`maxAffordable=${maxRam} maxRam=${ns.getPurchasedServerMaxRam()}`);
-    var ram = Math.min(maxRam, ns.getPurchasedServerMaxRam());
-
-    if (myPservCount === limit) {
-        sellLowestRamPserv(ns, ram);
-        return;
-    }
-
-    ns.tprint(`buying new server ram=${ram}`);
-    var hostname = ns.purchaseServer("pserv", ram);
-    if (!hostname) {
-        ns.tprint(`tried and failed to buy a pserv`);
-        return;
-    }
-
-    var target = getTarget(ns);
-    var params = getParams(ns, target.hostname);
-    ns.tprint(
-        `starting hack on ${hostname} target=${target.hostname} ${params.moneyThreshold} ${params.securityThreshold}`
+    logger.trace(
+        "could buy a pserv",
+        ns.nFormat(myCash, $),
+        ns.nFormat(ns.getPurchasedServerCost(ram), $),
+        ns.nFormat(ram * 1e9, GB)
     );
-    await deploy(ns, "/bin/hack.ns", hostname, [
-        target.hostname,
-        params.moneyThreshold.toString(),
-        params.securityThreshold.toString(),
-    ]);
-}
 
-async function sellLowestRamPserv(ns: NS, highestAffordableRam: number) {
-    var maxRam = ns.getPurchasedServerMaxRam();
-    var lowestRamAmount = maxRam;
-    var lowestHostname = "";
-    ns.getPurchasedServers().forEach((hostname) => {
-        var serverRam = ns.getServerMaxRam(hostname);
-        if (serverRam < lowestRamAmount && serverRam !== maxRam) {
-            lowestRamAmount = serverRam;
-            lowestHostname = hostname;
-        }
-    });
-    if (!!lowestHostname && highestAffordableRam !== lowestRamAmount) {
-        ns.tprint(`deleting ${lowestHostname} to make room for some chonkier ones`);
-        ns.killall(lowestHostname);
-        while (ns.getServerUsedRam(lowestHostname)) {
+    if (myPservs.length === limit) {
+        const pservToSell = myPservs[0];
+        ns.killall(pservToSell.hostname);
+        while (ns.getServerUsedRam(pservToSell.hostname)) {
             await ns.asleep(100);
         }
-        ns.deleteServer(lowestHostname);
+        ns.deleteServer(pservToSell.hostname);
+        logger.info(
+            "deleted pserv to make room for some chonkier ones",
+            pservToSell.hostname,
+            ns.nFormat(pservToSell.ram * 1e9, GB)
+        );
     }
+
+    const hostname = ns.purchaseServer("pserv", ram);
+    if (!hostname) {
+        logger.error("tried and failed to buy a pserv");
+        return;
+    }
+    logger.info("bought", hostname, ns.nFormat(ram * 1e9, GB));
+
+    const target = getTarget(ns);
+    const params = getParams(ns, target.hostname);
+    await deploy(
+        ns,
+        hackFilePath,
+        hostname,
+        target.hostname,
+        params.moneyThreshold.toString(),
+        params.securityThreshold.toString()
+    );
 }

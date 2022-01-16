@@ -1,34 +1,50 @@
 import { NS } from "Bitburner";
 import { shutdownScriptOnRemoteHost, startScriptOnRemoteHost, alreadyDeployed } from "/lib/Deploy";
-import { getTarget, getParams } from "/lib/Hack";
+import { getTarget, getParams, hackFilePath } from "/lib/Hack";
+import { Logger } from "/lib/Logger";
+import { $ } from "lib/Money";
 
 export async function main(ns: NS) {
-    var filename = "/bin/hack.ns";
-    if (!ns.fileExists(filename)) {
-        ns.tprint(`invalid file to deploy: ${filename} does not exist`);
+    const logger = new Logger(ns);
+    logger.trace("starting");
+
+    if (!ns.fileExists(hackFilePath)) {
+        logger.error("file does not exist", hackFilePath);
         return;
     }
 
     var target = getTarget(ns);
-    var hostname = target.hostname;
-    var maxMoney = target.maxMoney;
+    logger.info("target found", target.hostname, ns.nFormat(target.maxMoney, $));
 
-    ns.tprint(`hostname=${hostname} maxMoney=${maxMoney}`);
+    var params = getParams(ns, target.hostname);
+    logger.info("params found", ns.nFormat(params.moneyThreshold, $), params.securityThreshold);
 
-    var params = getParams(ns, hostname);
-    var moneyThreshold = params.moneyThreshold;
-    var securityThreshold = params.securityThreshold;
-
-    if (alreadyDeployed(ns, filename, "home", [hostname, moneyThreshold.toString(), securityThreshold.toString()])) {
-        ns.tprint(`skipping deploy=${filename} target=${hostname} because it's already running with that target`);
+    if (
+        alreadyDeployed(ns, hackFilePath, "home", [
+            target.hostname,
+            params.moneyThreshold.toString(),
+            params.securityThreshold.toString(),
+        ])
+    ) {
+        logger.trace("skipping deploy because it's already running with that target", hackFilePath, target, params);
         return;
     }
 
     // deploy manually to home so we don't mess any files up
-    shutdownScriptOnRemoteHost(ns, filename, "home");
-    startScriptOnRemoteHost(ns, filename, "home", [hostname, moneyThreshold.toString(), securityThreshold.toString()]);
+    shutdownScriptOnRemoteHost(ns, hackFilePath, "home");
+    startScriptOnRemoteHost(ns, hackFilePath, "home", [
+        target.hostname,
+        params.moneyThreshold.toString(),
+        params.securityThreshold.toString(),
+    ]);
 
-    // redeploy /bin/hack.ns with args
-    ns.tprint(`starting hostname=${hostname} moneyThreshold=${moneyThreshold} securityThreshold=${securityThreshold}`);
-    ns.spawn("/bin/deploy.ns", 1, filename, hostname, moneyThreshold.toString(), securityThreshold.toString());
+    logger.trace("spawning deploy", hackFilePath, target, params);
+    ns.spawn(
+        "/bin/deploy.js",
+        1,
+        hackFilePath,
+        target.hostname,
+        params.moneyThreshold.toString(),
+        params.securityThreshold.toString()
+    );
 }

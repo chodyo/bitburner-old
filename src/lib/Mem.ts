@@ -1,10 +1,15 @@
 import { NS } from "Bitburner";
 
 /**
+ * @description ns.nFormat formatting string for memory
+ */
+export const GB = "0.00b";
+
+/**
  * @description Checks if the given host can run even one thread of a script.
  */
 export function serverHasEnoughMemForScript(ns: NS, filename: string, hostname: string) {
-    var threadCount = getServerMaxThreadCountForScript(ns, filename, hostname);
+    const threadCount = getServerMaxThreadCountForScript(ns, filename, hostname);
     return threadCount > 0;
 }
 
@@ -13,13 +18,13 @@ export function serverHasEnoughMemForScript(ns: NS, filename: string, hostname: 
  *              excluding any currently running threads for other scripts.
  */
 export function getServerMaxThreadCountForScript(ns: NS, filename: string, hostname: string) {
-    var requiredMem = ns.getScriptRam(filename, "home");
-    var currentMemUtilization = 0;
+    const requiredMem = ns.getScriptRam(filename, "home");
+    let currentMemUtilization = 0;
 
     if (ns.scriptRunning(filename, hostname)) {
-        var ps = ns.ps(hostname);
-        for (var i in ps) {
-            var p = ps[i];
+        const ps = ns.ps(hostname);
+        for (const i in ps) {
+            const p = ps[i];
             if (p.filename === filename) {
                 currentMemUtilization = p.threads * requiredMem;
                 break;
@@ -27,7 +32,7 @@ export function getServerMaxThreadCountForScript(ns: NS, filename: string, hostn
         }
     }
 
-    var availableMem = ns.getServerMaxRam(hostname) - ns.getServerUsedRam(hostname) + currentMemUtilization;
-    var threadCount = Math.floor(availableMem / requiredMem);
+    const availableMem = ns.getServerMaxRam(hostname) - ns.getServerUsedRam(hostname) + currentMemUtilization;
+    const threadCount = Math.floor(availableMem / requiredMem);
     return threadCount;
 }

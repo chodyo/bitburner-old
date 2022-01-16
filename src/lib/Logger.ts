@@ -12,19 +12,19 @@ class Logger {
     }
 
     trace(msg: string, ...args: any[]) {
-        this.log(msg, this.caller(), Logger.TRACE_LITERAL, args);
+        this.log(msg, this.caller(), Logger.TRACE_LITERAL, ...args);
     }
 
     info(msg: string, ...args: any[]) {
-        this.log(msg, this.caller(), Logger.INFO_LITERAL, args);
+        this.log(msg, this.caller(), Logger.INFO_LITERAL, ...args);
     }
 
     warn(msg: string, ...args: any[]) {
-        this.log(msg, this.caller(), Logger.WARN_LITERAL, args);
+        this.log(msg, this.caller(), Logger.WARN_LITERAL, ...args);
     }
 
     error(msg: string, ...args: any[]) {
-        this.log(msg, this.caller(), Logger.ERROR_LITERAL, args);
+        this.log(msg, this.caller(), Logger.ERROR_LITERAL, ...args);
     }
 
     private caller() {
@@ -32,21 +32,19 @@ class Logger {
             throw new Error();
         } catch (e) {
             // matches this function, the caller and the parent
-            const allMatches = e.stack.match(/([\w\.]+)@|at ([\w\.]+) \(/g);
+            const allMatches = e.stack.match(/([\w.]+)@|at ([\w.]+) \(/g);
             // match parent function name
-            const parentMatches = allMatches[2].match(/([\w\.]+)@|at ([\w\.]+) \(/);
+            const parentMatches = allMatches[2].match(/([\w.]+)@|at ([\w.]+) \(/);
             // return only name
             return parentMatches[1] || parentMatches[2];
         }
     }
 
-    private log(msg: string, caller: string, level: string, args: any[]) {
-        for (let i in args) {
-            args[i] = JSON.stringify(args[i]);
-        }
+    private log(msg: string, caller: string, level: string, ...args: any[]) {
         level = level.padEnd(6);
         const date = new Date().toLocaleTimeString("en-US", { hour12: false }).padEnd(8);
         caller = caller.padEnd(20);
+        args = args.map((val) => (typeof val === "object" ? JSON.stringify(val) : val));
         this.ns.tprintf(`${level} >  ${date}  >  ${caller}  >  ${msg} ${args}`);
     }
 }

@@ -1,7 +1,7 @@
 import { NS } from "Bitburner";
 
 export function main(ns: NS) {
-    var hostname = ns.args[0];
+    const hostname = ns.args[0];
     gainRootAccess(ns, hostname.toString());
 }
 
@@ -15,11 +15,9 @@ export function gainRootAccess(ns: NS, hostname: string) {
 
     openPorts(ns, hostname);
 
-    ns.tprint(`attempting to nuke ${hostname}`);
     try {
         ns.nuke(hostname);
     } catch (e) {
-        ns.tprint(`failed to gain root access for host=${hostname}; error=${e}`);
         return false;
     }
     return true;

@@ -2,10 +2,15 @@ import { NS } from "Bitburner";
 import { getEveryAccessibleServerMonies } from "/lib/Money";
 import { gainRootAccess } from "/lib/Root";
 
+/**
+ * @description The path to the script that will be deployed and run on each server.
+ */
+export const hackFilePath = "/bin/hack.js";
+
 /** @description Check if I have high enough level to hack the host **/
 export function isHackable(ns: NS, hostname: string) {
-    var requiredHackingLevel = ns.getServerRequiredHackingLevel(hostname);
-    var myHackingLevel = ns.getHackingLevel();
+    const requiredHackingLevel = ns.getServerRequiredHackingLevel(hostname);
+    const myHackingLevel = ns.getHackingLevel();
     return requiredHackingLevel <= myHackingLevel;
 }
 
@@ -13,10 +18,10 @@ export function isHackable(ns: NS, hostname: string) {
  * @description Calculate the highest ROI host to hack
  */
 export function getTarget(ns: NS) {
-    var target = "";
-    var maxMoney = 0;
+    let target = "";
+    let maxMoney = 0;
 
-    var serverMonies = new Map();
+    const serverMonies = new Map();
     getEveryAccessibleServerMonies(ns, serverMonies);
     serverMonies.forEach((potentialValue, potentialTarget) => {
         const richer = potentialValue > maxMoney;
@@ -38,8 +43,8 @@ export function getTarget(ns: NS) {
  * @description Get threshold params for hack script
  */
 export function getParams(ns: NS, hostname: string) {
-    var maxMoney = ns.getServerMaxMoney(hostname);
-    var minSecurityLevel = ns.getServerMinSecurityLevel(hostname);
+    const maxMoney = ns.getServerMaxMoney(hostname);
+    const minSecurityLevel = ns.getServerMinSecurityLevel(hostname);
     return {
         moneyThreshold: maxMoney * 0.75,
         securityThreshold: minSecurityLevel + 5,

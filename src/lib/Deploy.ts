@@ -1,22 +1,28 @@
 import { NS } from "Bitburner";
+import { Logger } from "/lib/Logger";
 import { getServerMaxThreadCountForScript } from "/lib/Mem";
 
 /**
  * @description Copy file to remote host and start it with given args
  */
-export async function deploy(ns: NS, filename: string, hostname: string, args: any[]) {
-    ns.tprint(`deploying ${filename} to ${hostname}`);
+export async function deploy(ns: NS, filename: string, hostname: string, ...args: any[]) {
+    const logger = new Logger(ns);
+    logger.info("deploying script to host", filename, hostname, ...args);
     await copyScriptToRemoteHost(ns, filename, hostname);
-    startScriptOnRemoteHost(ns, filename, hostname, args);
+    startScriptOnRemoteHost(ns, filename, hostname, ...args);
 }
 
 async function copyScriptToRemoteHost(ns: NS, filename: string, hostname: string) {
     await ns.scp(filename, "home", hostname);
 }
 
-export function startScriptOnRemoteHost(ns: NS, filename: string, hostname: string, args: any[]) {
-    var threadCount = getServerMaxThreadCountForScript(ns, filename, hostname);
-    ns.tprint(`starting ${filename} on ${hostname} threads=${threadCount} args=${JSON.stringify(args)}`);
+export function startScriptOnRemoteHost(ns: NS, filename: string, hostname: string, ...args: any[]) {
+    let threadCount = getServerMaxThreadCountForScript(ns, filename, hostname);
+    if (hostname === "home") {
+        threadCount *= 0.9;
+    }
+    const logger = new Logger(ns);
+    logger.info("starting script", filename, hostname, threadCount, ...args);
     ns.exec(filename, hostname, threadCount, ...args);
 }
 
@@ -24,7 +30,8 @@ export function startScriptOnRemoteHost(ns: NS, filename: string, hostname: stri
  * Stop script on remote host and delete the file
  */
 export function undeploy(ns: NS, filename: string, hostname: string) {
-    ns.tprint(`undeploying ${filename} from ${hostname}`);
+    const logger = new Logger(ns);
+    logger.info("undeploying script from host", filename, hostname);
     shutdownScriptOnRemoteHost(ns, filename, hostname);
     removeScriptOnRemoteHost(ns, filename, hostname);
 }
@@ -45,7 +52,7 @@ function removeScriptOnRemoteHost(ns: NS, filename: string, hostname: string) {
 /**
  * @description Check if script is already running on a machine
  */
-export function alreadyDeployed(ns: NS, filename: string, hostname: string, args: any[]) {
-    var scriptInfo = ns.getRunningScript(filename, hostname, ...args);
+export function alreadyDeployed(ns: NS, filename: string, hostname: string, ...args: any[]) {
+    const scriptInfo = ns.getRunningScript(filename, hostname, ...args);
     return !!scriptInfo;
 }

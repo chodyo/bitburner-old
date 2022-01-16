@@ -2,9 +2,11 @@ import { NS } from "Bitburner";
 import { buyCheapestUpgrade } from "lib/Hacknet";
 import { desiredSavings } from "lib/Money";
 import { buyPservUpgrade } from "lib/Pserv";
+import { Logger } from "/lib/Logger";
 
 export async function main(ns: NS) {
-    ns.tprint(`starting optimize::main`);
+    const logger = new Logger(ns);
+    logger.trace("starting");
 
     var isHacknetUpgradable = true;
     var myHackingLevel = 0; // TODO: make an event channel via ports
@@ -18,8 +20,8 @@ export async function main(ns: NS) {
         await buyPservUpgrade(ns);
 
         if (shouldITryHackingSomeoneNew(ns, myHackingLevel)) {
-            ns.tprint(`redeploying hack scripts`);
-            ns.run("/bin/start-hack.ns");
+            logger.trace(`redeploying hack scripts`);
+            ns.run("/bin/startHack.js");
         }
 
         // TODO: check for new programs to create and create them

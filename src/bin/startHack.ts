@@ -20,11 +20,14 @@ export async function main(ns: NS) {
     logger.info("params found", ns.nFormat(params.moneyThreshold, $), params.securityThreshold);
 
     if (
-        alreadyDeployed(ns, hackFilePath, "home", [
+        alreadyDeployed(
+            ns,
+            hackFilePath,
+            "home",
             target.hostname,
             params.moneyThreshold.toString(),
-            params.securityThreshold.toString(),
-        ])
+            params.securityThreshold.toString()
+        )
     ) {
         logger.trace("skipping deploy because it's already running with that target", hackFilePath, target, params);
         return;
@@ -32,11 +35,14 @@ export async function main(ns: NS) {
 
     // deploy manually to home so we don't mess any files up
     shutdownScriptOnRemoteHost(ns, hackFilePath, "home");
-    startScriptOnRemoteHost(ns, hackFilePath, "home", [
+    startScriptOnRemoteHost(
+        ns,
+        hackFilePath,
+        "home",
         target.hostname,
         params.moneyThreshold.toString(),
-        params.securityThreshold.toString(),
-    ]);
+        params.securityThreshold.toString()
+    );
 
     logger.trace("spawning deploy", hackFilePath, target, params);
     ns.spawn(

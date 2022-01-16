@@ -2,7 +2,7 @@ import { NS } from "Bitburner";
 import { deploy } from "lib/Deploy";
 import { getTarget, getParams, hackFilePath } from "lib/Hack";
 import { Logger } from "/lib/Logger";
-import { $ } from "/lib/Money";
+import { $, desiredSavings } from "/lib/Money";
 import { GB } from "/lib/Mem";
 
 export async function main(ns: NS) {
@@ -25,23 +25,19 @@ export async function buyPservUpgrade(ns: NS) {
 
     const dollarsPerGig = 55000; // i think? just based on the store pages
     const myCash = ns.getServerMoneyAvailable("home");
-    let maxRam = Math.floor(myCash / dollarsPerGig);
-    if (maxRam < 8) {
-        // kinda pointless
-        logger.trace("can't buy more than 8gb ram", ns.nFormat(myCash, $), ns.nFormat(maxRam * 1e9, GB));
-        return;
-    }
-
+    let ram = Math.floor(myCash / dollarsPerGig);
     let bitPos = 0;
-    while (maxRam !== 0) {
+    while (ram !== 0) {
         bitPos++;
-        maxRam >>= 1;
+        ram >>= 1;
     }
-    maxRam = Math.pow(2, bitPos - 1);
+    ram = Math.pow(2, bitPos - 1);
+    ram = Math.min(ram, ns.getPurchasedServerMaxRam());
 
-    const ram = Math.min(maxRam, ns.getPurchasedServerMaxRam());
-
-    if (myPservs[0].ram >= ram) {
+    const notWorthIt = ram < 8;
+    const wouldntBeAnUpgrade = myPservs[0].ram >= ram;
+    const wouldSpendTooMuch = myCash - ns.getPurchasedServerCost(ram) < desiredSavings(ns);
+    if (notWorthIt || wouldntBeAnUpgrade || wouldSpendTooMuch) {
         return;
     }
 

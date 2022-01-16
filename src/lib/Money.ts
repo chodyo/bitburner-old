@@ -11,9 +11,23 @@ export async function main(ns: NS) {
     ns.tprint(JSON.stringify(Array.from(serverMonies.entries())));
 }
 
+/**
+ * Exponentially grow savings based on hacking level. e.g.
+ *
+ * Hacking Level => Savings
+ *
+ *             1 =>  $10k
+ *            10 => $316k
+ *            25 => $1.3m
+ *            50 => $3.5m
+ *           100 =>  $10m
+ *           250 =>  $40m
+ *           500 => $112m
+ *          1000 => $316m
+ */
 export function desiredSavings(ns: NS) {
     const myHackLevel = ns.getPlayer().hacking;
-    return Math.pow(myHackLevel, 1.5) * 10000; // 1 => 10k; 10 => 320k; 20 => 890k; 50 => 3.5m; 100 => 10m; 237 => 36m
+    return Math.pow(myHackLevel, 1.5) * 10000;
 }
 
 export function getEveryAccessibleServerMonies(ns: NS, serverMonies: Map<string, number>) {

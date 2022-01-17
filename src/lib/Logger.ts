@@ -1,14 +1,40 @@
 import { NS } from "Bitburner";
 
+type LogOptions = {
+    /**
+     * Controls whether netscript functions should log.
+     * @default false
+     */
+    enableNSTrace?: boolean;
+
+    /**
+     * Controls whether logger output should print to the terminal.
+     * @default false
+     */
+    stdout?: boolean;
+};
+
 class Logger {
     static TRACE_LITERAL = "TRACE";
     static INFO_LITERAL = "INFO";
     static WARN_LITERAL = "WARN";
     static ERROR_LITERAL = "ERROR";
-    ns: NS;
 
-    constructor(ns: NS) {
+    ns: NS;
+    options: LogOptions;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    print: (msg: any) => void;
+
+    constructor(ns: NS, options?: LogOptions) {
         this.ns = ns;
+        this.options = { enableNSTrace: false, stdout: false, ...options };
+
+        if (this.options.stdout) {
+            this.print = this.ns.tprint;
+        } else {
+            this.print = this.ns.print;
+        }
     }
 
     trace(msg: string, ...args: any[]) {
@@ -41,11 +67,14 @@ class Logger {
     }
 
     private log(msg: string, caller: string, level: string, ...args: any[]) {
+        this.ns.disableLog("ALL"); // remove this if regular function logs are helpful
+
         level = level.padEnd(6);
         const date = new Date().toLocaleTimeString("en-US", { hour12: false }).padEnd(8);
         caller = caller.padEnd(20);
         args = args.map((val) => (typeof val === "object" ? JSON.stringify(val) : val));
-        this.ns.print(`${level} >  ${date}  >  ${caller}  >  ${msg} ${args}`);
+
+        this.print(`${level} >  ${date}  >  ${caller}  >  ${msg} ${args}`);
     }
 }
 

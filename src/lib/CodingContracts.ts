@@ -69,7 +69,7 @@ class Contract {
         });
     }
 
-    attempt(answer: string[]) {
+    attempt(answer: number | string[]) {
         return this.ns.codingcontract.attempt(answer, this.filename, this.hostname, { returnReward: true });
     }
 }
@@ -87,18 +87,36 @@ export async function main(ns: NS) {
             break;
         }
         case "autosolve": {
-            findAndFilterContracts(ns, "Generate IP Addresses").forEach((ipContract) => {
-                const answer = Array.from(recurseToConvertStringToIPs(ipContract.data).keys());
-                logger.trace("attempting to autosolve", ipContract.toString(), "answer", answer);
-                logger.info("result", ipContract.attempt(answer));
+            findAndFilterContracts(ns).forEach((contract) => {
+                const data = contract.data;
+                let answer: number | string[];
+                switch (contract.type) {
+                    case "Generate IP Addresses": {
+                        answer = Array.from(recurseToConvertStringToIPs(data).keys());
+                        break;
+                    }
+                    case "Minimum Path Sum in a Triangle": {
+                        answer = recurseToFindMinimumPathSumInATriangle(data);
+                        break;
+                    }
+                    default:
+                        return;
+                }
+                const result = contract.attempt(answer);
+                logger.info("result", result);
             });
-
             break;
         }
         case "ip": {
             const arg = ns.args[1].toString();
             const validIPAddresses = recurseToConvertStringToIPs(arg);
             logger.info("=>", ...Array.from(validIPAddresses.keys()));
+            break;
+        }
+        case "triangle": {
+            const arg = JSON.parse(ns.args[1].toString());
+            const minimumPath = recurseToFindMinimumPathSumInATriangle(arg);
+            logger.info("=>", minimumPath);
             break;
         }
         default:
@@ -197,4 +215,14 @@ function recurseToConvertStringToIPs(digits: string, octets = 4) {
         });
     }
     return combinations;
+}
+
+function recurseToFindMinimumPathSumInATriangle(triangle: number[][], depth = 0, i = 0) {
+    if (triangle.length - 1 === depth) {
+        return triangle[depth][i];
+    }
+
+    const leftSum = recurseToFindMinimumPathSumInATriangle(triangle, depth + 1, i);
+    const rightSum = recurseToFindMinimumPathSumInATriangle(triangle, depth + 1, i + 1);
+    return triangle[depth][i] + Math.min(leftSum, rightSum);
 }

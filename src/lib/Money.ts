@@ -1,4 +1,5 @@
 import { NS } from "Bitburner";
+import { Logger } from "/lib/Logger";
 
 /**
  * @description ns.nFormat formatting string for money
@@ -6,9 +7,10 @@ import { NS } from "Bitburner";
 export const $ = "($0.00a)";
 
 export async function main(ns: NS) {
+    const logger = new Logger(ns);
     const serverMonies = new Map();
     getEveryAccessibleServerMonies(ns, serverMonies);
-    ns.tprint(JSON.stringify(Array.from(serverMonies.entries())));
+    logger.info("all server monies", serverMonies);
 }
 
 /**

@@ -45,7 +45,7 @@ class Logger {
         const date = new Date().toLocaleTimeString("en-US", { hour12: false }).padEnd(8);
         caller = caller.padEnd(20);
         args = args.map((val) => (typeof val === "object" ? JSON.stringify(val) : val));
-        this.ns.tprintf(`${level} >  ${date}  >  ${caller}  >  ${msg} ${args}`);
+        this.ns.print(`${level} >  ${date}  >  ${caller}  >  ${msg} ${args}`);
     }
 }
 

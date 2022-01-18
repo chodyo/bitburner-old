@@ -6,6 +6,10 @@ enum command {
     autosolve,
     ip,
     triangle,
+    largestPrimeFactor,
+}
+function stringToCommand(o: string | number | boolean): command {
+    return command[o.toString() as keyof typeof command];
 }
 
 const contractTypes = [
@@ -84,8 +88,7 @@ class Contract {
 export async function main(ns: NS) {
     const logger = new Logger(ns, { stdout: true, enableNSTrace: true });
 
-    const cmd = command[ns.args[0].toString() as keyof typeof command];
-    switch (cmd) {
+    switch (stringToCommand(ns.args[0])) {
         case command.find: {
             const typeFilter = ns.args[1]?.toString();
             findAndFilterContracts(ns, typeFilter).forEach((contract) => {
@@ -93,19 +96,24 @@ export async function main(ns: NS) {
             });
             break;
         }
+
         case command.autosolve: {
             findAndFilterContracts(ns).forEach((contract) => {
                 const data = contract.data;
                 let answer: number | string[];
                 switch (contract.type) {
-                    case "Generate IP Addresses": {
+                    case "Generate IP Addresses":
                         answer = Array.from(recurseToConvertStringToIPs(data).keys());
                         break;
-                    }
-                    case "Minimum Path Sum in a Triangle": {
+
+                    case "Minimum Path Sum in a Triangle":
                         answer = recurseToFindMinimumPathSumInATriangle(data);
                         break;
-                    }
+
+                    case "Find Largest Prime Factor":
+                        answer = largestPrimeFactor(data);
+                        break;
+
                     default:
                         return;
                 }
@@ -114,18 +122,27 @@ export async function main(ns: NS) {
             });
             break;
         }
+
         case command.ip: {
             const arg = ns.args[1].toString();
             const validIPAddresses = recurseToConvertStringToIPs(arg);
             logger.info("=>", ...Array.from(validIPAddresses.keys()));
             break;
         }
+
         case command.triangle: {
             const arg = JSON.parse(ns.args[1].toString());
             const minimumPath = recurseToFindMinimumPathSumInATriangle(arg);
             logger.info("=>", minimumPath);
             break;
         }
+
+        case command.largestPrimeFactor: {
+            const n = typeof ns.args[1] === "number" ? ns.args[1] : parseInt(ns.args[1].toString());
+            logger.info("=>", largestPrimeFactor(n));
+            break;
+        }
+
         default:
             logger.warn("not sure what you meant. valid commands are");
             (Object.values(command).filter((cmd) => typeof cmd === "string") as string[]).forEach((cmd) => {
@@ -235,4 +252,23 @@ function recurseToFindMinimumPathSumInATriangle(triangle: number[][], depth = 0,
     const leftSum = recurseToFindMinimumPathSumInATriangle(triangle, depth + 1, i);
     const rightSum = recurseToFindMinimumPathSumInATriangle(triangle, depth + 1, i + 1);
     return triangle[depth][i] + Math.min(leftSum, rightSum);
+}
+
+function largestPrimeFactor(n: number) {
+    const factors: number[] = [];
+    let d = 2;
+    while (n > 1) {
+        while (n % d === 0) {
+            factors.push(d);
+            n /= d;
+        }
+        d++;
+        if (d * d > n) {
+            if (n > 1) {
+                factors.push(n);
+            }
+            break;
+        }
+    }
+    return factors.sort((a, b) => a - b).pop() || 0;
 }

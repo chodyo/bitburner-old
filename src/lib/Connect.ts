@@ -10,6 +10,11 @@ export async function main(ns: NS) {
     checkedHosts.clear();
     const connectChain = recursivelyFindHost(ns, "home", hostname);
 
+    if (connectChain.length === 0) {
+        logger.warn("host not found");
+        return;
+    }
+
     logger.info("host found, connect by", connectChain.join("->"));
 
     // connectChain.forEach((hostname) => {

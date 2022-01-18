@@ -1,6 +1,13 @@
 import { NS } from "Bitburner";
 import { Logger } from "/lib/Logger";
 
+enum command {
+    find,
+    autosolve,
+    ip,
+    triangle,
+}
+
 const contractTypes = [
     "Algorithmic Stock Trader I",
     "Algorithmic Stock Trader II",
@@ -77,16 +84,16 @@ class Contract {
 export async function main(ns: NS) {
     const logger = new Logger(ns, { stdout: true, enableNSTrace: true });
 
-    const command = ns.args[0];
-    switch (command) {
-        case "find": {
+    const cmd = command[ns.args[0].toString() as keyof typeof command];
+    switch (cmd) {
+        case command.find: {
             const typeFilter = ns.args[1]?.toString();
             findAndFilterContracts(ns, typeFilter).forEach((contract) => {
                 logger.info(contract.filename, contract.hostname, contract.type);
             });
             break;
         }
-        case "autosolve": {
+        case command.autosolve: {
             findAndFilterContracts(ns).forEach((contract) => {
                 const data = contract.data;
                 let answer: number | string[];
@@ -107,20 +114,23 @@ export async function main(ns: NS) {
             });
             break;
         }
-        case "ip": {
+        case command.ip: {
             const arg = ns.args[1].toString();
             const validIPAddresses = recurseToConvertStringToIPs(arg);
             logger.info("=>", ...Array.from(validIPAddresses.keys()));
             break;
         }
-        case "triangle": {
+        case command.triangle: {
             const arg = JSON.parse(ns.args[1].toString());
             const minimumPath = recurseToFindMinimumPathSumInATriangle(arg);
             logger.info("=>", minimumPath);
             break;
         }
         default:
-            logger.warn("not sure what you mean");
+            logger.warn("not sure what you meant. valid commands are");
+            (Object.values(command).filter((cmd) => typeof cmd === "string") as string[]).forEach((cmd) => {
+                logger.warn(cmd);
+            });
             return;
     }
 }

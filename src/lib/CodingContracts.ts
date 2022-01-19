@@ -54,12 +54,10 @@ class Contract {
         return this.ns.codingcontract.getData(this.filename, this.hostname);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     get description(): string {
         return this.ns.codingcontract.getDescription(this.filename, this.hostname);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     get numTriesRemaining(): number {
         return this.ns.codingcontract.getNumTriesRemaining(this.filename, this.hostname);
     }
@@ -85,13 +83,17 @@ class Contract {
     }
 }
 
+type Filters = {
+    type?: ContractType;
+    faction?: string;
+};
+
 export async function main(ns: NS) {
     const logger = new Logger(ns, { stdout: true, enableNSTrace: true });
 
     switch (stringToCommand(ns.args[0])) {
         case command.find: {
-            const typeFilter = ns.args[1]?.toString();
-            findAndFilterContracts(ns, typeFilter).forEach((contract) => {
+            findAndFilterContracts(ns).forEach((contract) => {
                 logger.info(contract.filename, contract.hostname, contract.type);
             });
             break;
@@ -117,8 +119,13 @@ export async function main(ns: NS) {
                     default:
                         return;
                 }
-                const result = contract.attempt(answer);
-                logger.info("result", result);
+                logger.info(
+                    "attempting to solve with remaining guesses",
+                    contract.numTriesRemaining,
+                    contract.filename,
+                    contract.hostname
+                );
+                logger.info("result", contract.attempt(answer));
             });
             break;
         }
@@ -152,16 +159,29 @@ export async function main(ns: NS) {
     }
 }
 
-function findAndFilterContracts(ns: NS, typeFilter?: string) {
+function findAndFilterContracts(ns: NS) {
+    const filters: Filters = ns.args.length > 1 ? JSON.parse(ns.args[1]?.toString()) : {};
     const checkedHosts = new Map<string, boolean>();
     const contracts: Map<string, Contract> = recursivelyFindContracts(ns, "home", checkedHosts);
 
-    if (typeFilter && isContractType(typeFilter)) {
-        const tf = <ContractType>typeFilter;
+    if (filters?.type && filters.type !== undefined) {
         contracts.forEach((v, k, m) => {
-            if (v.type !== tf) {
+            if (v.type !== filters.type) {
                 m.delete(k);
             }
+        });
+    }
+
+    // empty string indicates contract not associated with any faction
+    const factionFilter = filters?.faction?.toLowerCase();
+    if (factionFilter || factionFilter === "") {
+        const regexp = /^contract-[0-9]+-?(.*)\.cct$/;
+        contracts.forEach((v, k, m) => {
+            const factionExecArray = regexp.exec(v.filename);
+            if (factionExecArray?.at(1)?.toLowerCase() === factionFilter) {
+                return;
+            }
+            m.delete(k);
         });
     }
 

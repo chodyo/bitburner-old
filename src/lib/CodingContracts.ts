@@ -7,22 +7,23 @@ enum command {
     ip,
     triangle,
     largestPrimeFactor,
+    stockTraderI,
 }
 function stringToCommand(o: string | number | boolean): command {
     return command[o.toString() as keyof typeof command];
 }
 
 const contractTypes = [
-    "Algorithmic Stock Trader I",
+    "Algorithmic Stock Trader I", //        ✔
     "Algorithmic Stock Trader II",
     "Algorithmic Stock Trader III",
     "Algorithmic Stock Trader IV",
     "Array Jumping Game",
     "Find All Valid Math Expressions",
-    "Find Largest Prime Factor",
-    "Generate IP Addresses",
+    "Find Largest Prime Factor", //         ✔
+    "Generate IP Addresses", //             ✔
     "Merge Overlapping Intervals",
-    "Minimum Path Sum in a Triangle",
+    "Minimum Path Sum in a Triangle", //    ✔
     "Sanitize Parentheses in Expression",
     "Spiralize Matrix",
     "Subarray with Maximum Sum",
@@ -116,16 +117,17 @@ export async function main(ns: NS) {
                         answer = largestPrimeFactor(data);
                         break;
 
+                    case "Algorithmic Stock Trader I":
+                        answer = stockTraderI(data);
+                        break;
+
                     default:
                         return;
                 }
-                logger.info(
-                    "attempting to solve with remaining guesses",
-                    contract.numTriesRemaining,
-                    contract.filename,
-                    contract.hostname
-                );
-                logger.info("result", contract.attempt(answer));
+                logger.info("attempting to solve", contract.type, answer, contract.filename, contract.hostname);
+                const result = contract.attempt(answer);
+                if (result) logger.info("result", result);
+                else logger.error("failed to solve, only have this many tries left", contract.numTriesRemaining);
             });
             break;
         }
@@ -147,6 +149,12 @@ export async function main(ns: NS) {
         case command.largestPrimeFactor: {
             const n = typeof ns.args[1] === "number" ? ns.args[1] : parseInt(ns.args[1].toString());
             logger.info("=>", largestPrimeFactor(n));
+            break;
+        }
+
+        case command.stockTraderI: {
+            const arg = JSON.parse(ns.args[1].toString());
+            logger.info("=>", stockTraderI(arg));
             break;
         }
 
@@ -291,4 +299,35 @@ function largestPrimeFactor(n: number) {
         }
     }
     return factors.sort((a, b) => a - b).pop() || 0;
+}
+
+// todo: possible optimization = remove downward trending prices
+function stockTraderI(prices: number[]) {
+    if (prices.length < 2) {
+        return 0;
+    }
+
+    let l = 0,
+        low = prices[l],
+        h = 0,
+        high = low;
+
+    prices.forEach((price, i) => {
+        if (price < low) {
+            low = price;
+            l = i;
+        }
+        if (price > high) {
+            high = price;
+            h = i;
+        }
+    });
+
+    if (l < h) {
+        return high - low;
+    }
+
+    const pricesWithoutLow = [...prices.slice(0, l), ...prices.slice(l + 1)];
+    const pricesWithoutHigh = [...prices.slice(0, h), ...prices.slice(h + 1)];
+    return Math.max(stockTraderI(pricesWithoutLow), stockTraderI(pricesWithoutHigh));
 }

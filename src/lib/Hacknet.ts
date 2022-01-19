@@ -6,11 +6,13 @@ export async function main(ns: NS) {
     buyCheapestUpgrade(ns, desiredSavings(ns));
 }
 
+const maxToSpendOnHacknet = 1e9;
+
 export function buyCheapestUpgrade(ns: NS, maxMoneyKeep: number) {
     const logger = new Logger(ns);
 
     const cheapest = {
-        cost: Infinity,
+        cost: maxToSpendOnHacknet,
         runUpgradeFn: function noUpgrade(_index: number, _n: number) {
             return;
         },
@@ -40,7 +42,7 @@ export function buyCheapestUpgrade(ns: NS, maxMoneyKeep: number) {
         });
     }
 
-    if (cheapest.cost === Infinity) {
+    if (cheapest.cost === maxToSpendOnHacknet) {
         return false;
     } else if (ns.getServerMoneyAvailable("home") >= cheapest.cost + maxMoneyKeep) {
         logger.info("upgrading hacknet", cheapest.runUpgradeFn.name, cheapest.upgradeFnParam);

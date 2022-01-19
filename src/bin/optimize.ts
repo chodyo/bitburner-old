@@ -31,12 +31,10 @@ export async function main(ns: NS) {
     }
 }
 
-function didILevelUpHacking(ns: NS, oldLevel: number) {
-    return ns.getPlayer().hacking !== oldLevel;
-}
-
 function shouldITryHackingSomeoneNew(ns: NS, myHackingLevel: number) {
-    if (didILevelUpHacking(ns, myHackingLevel) && (ns.getPlayer().hacking % 10 === 0 || ns.getPlayer().hacking === 1)) {
+    const justLeveledUp = ns.getPlayer().hacking !== myHackingLevel;
+    const multipleOfTen = ns.getPlayer().hacking % 10 === 0;
+    if ((justLeveledUp && multipleOfTen) || ns.getPlayer().hacking === 1) {
         return true;
     }
     // TODO: check for new programs on my home

@@ -34,10 +34,10 @@ export async function buyPservUpgrade(ns: NS) {
     ram = Math.pow(2, bitPos - 1);
     ram = Math.min(ram, ns.getPurchasedServerMaxRam());
 
-    const notWorthIt = ram < 8;
-    const wouldntBeAnUpgrade = myPservs[0].ram >= ram;
-    const wouldSpendTooMuch = myCash - ns.getPurchasedServerCost(ram) < desiredSavings(ns);
-    if (notWorthIt || wouldntBeAnUpgrade || wouldSpendTooMuch) {
+    const worthIt = ram >= 8;
+    const isAnUpgrade = myPservs[0]?.ram < ram || true;
+    const iHaveEnoughSavings = myCash - ns.getPurchasedServerCost(ram) >= desiredSavings(ns);
+    if (!worthIt || !isAnUpgrade || !iHaveEnoughSavings) {
         return;
     }
 

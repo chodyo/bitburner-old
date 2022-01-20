@@ -1,5 +1,6 @@
 import { NS } from "Bitburner";
 import { Logger } from "/lib/Logger";
+import { pricesWithOnlyUpwardTrends } from "/lib/Stonks";
 
 enum command {
     find,
@@ -119,7 +120,7 @@ export async function main(ns: NS) {
                         break;
 
                     case "Algorithmic Stock Trader I":
-                        answer = stockTraderI(data);
+                        answer = stockTraderI(pricesWithOnlyUpwardTrends(data));
                         break;
 
                     case "Algorithmic Stock Trader II":
@@ -158,7 +159,7 @@ export async function main(ns: NS) {
         }
 
         case command.stockTraderI: {
-            const arg = JSON.parse(ns.args[1].toString());
+            const arg = pricesWithOnlyUpwardTrends(JSON.parse(ns.args[1].toString()));
             logger.info("=>", stockTraderI(arg));
             break;
         }
@@ -318,35 +319,20 @@ function largestPrimeFactor(n: number) {
     return factors.sort((a, b) => a - b).pop() || 0;
 }
 
-// todo: possible optimization = remove downward trending prices
-function stockTraderI(prices: number[]) {
-    if (prices.length < 2) {
-        return 0;
-    }
-
-    let l = 0,
-        low = prices[l],
-        h = 0,
-        high = low;
-
-    prices.forEach((price, i) => {
-        if (price < low) {
-            low = price;
-            l = i;
-        }
-        if (price > high) {
-            high = price;
-            h = i;
-        }
+function stockTraderI(trends: { low: number; high: number }[]) {
+    let bestTrade = 0;
+    const highs = trends.map((v, i) => ({ bid: v.high, idx: i })).sort((a, b) => a.bid - b.bid);
+    trends.forEach((trend, i) => {
+        const ask = trend.low;
+        let bestTradeForAsk = 0;
+        highs.forEach((high) => {
+            const bid = high.bid;
+            const j = high.idx;
+            if (bid - ask > bestTradeForAsk && j >= i) bestTradeForAsk = bid - ask;
+        });
+        if (bestTradeForAsk > bestTrade) bestTrade = bestTradeForAsk;
     });
-
-    if (l < h) {
-        return high - low;
-    }
-
-    const pricesWithoutLow = [...prices.slice(0, l), ...prices.slice(l + 1)];
-    const pricesWithoutHigh = [...prices.slice(0, h), ...prices.slice(h + 1)];
-    return Math.max(stockTraderI(pricesWithoutLow), stockTraderI(pricesWithoutHigh));
+    return bestTrade;
 }
 
 /**
@@ -372,40 +358,4 @@ function stockTraderII(trends: { low: number; high: number }[], stock = 0) {
     const hodl = stockTraderII(theFuture, stock);
     const sellNow = stockTraderII(theFuture, stock - 1) + bid;
     return Math.max(sellNow, hodl);
-}
-
-function pricesWithOnlyUpwardTrends(prices: number[]) {
-    if (prices.length < 2) {
-        return [];
-    }
-
-    prices = prices
-        .filter((v, i, p) => {
-            // squish duplicates ahead of time because they really mess with my head
-            return i === p.length - 1 || v !== p[i + 1];
-        })
-        .filter((v, i, p) => {
-            const prev = p[i - 1];
-            const next = p[i + 1];
-
-            // front end is a special case
-            if (i === 0) {
-                return v < next;
-            }
-
-            // back end is also a special case
-            if (i === p.length - 1) {
-                return prev < v;
-            }
-
-            const isLocalMax = prev < v && v > next;
-            const isLocalMin = prev > v && v < next;
-            return isLocalMax || isLocalMin;
-        });
-
-    const upwardTrends: { low: number; high: number }[] = [];
-    for (let i = 0; i < prices.length; i += 2) {
-        upwardTrends.push({ low: prices[i], high: prices[i + 1] });
-    }
-    return upwardTrends;
 }

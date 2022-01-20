@@ -124,7 +124,7 @@ export async function main(ns: NS) {
                     default:
                         return;
                 }
-                logger.info("attempting to solve", contract.type, answer, contract.filename, contract.hostname);
+                logger.info("attempting to solve", contract.toString(), answer);
                 const result = contract.attempt(answer);
                 if (result) logger.info("result", result);
                 else logger.error("failed to solve, only have this many tries left", contract.numTriesRemaining);
@@ -250,10 +250,16 @@ function recurseToConvertStringToIPs(digits: string, octets = 4) {
         const remainder = padDigits.slice(3);
 
         // disqualifiers
+        const octetStartedWith0 = digits.startsWith("0");
         const octetValueOutOfRange = octet >= maxOctetVal;
         const finalOctetShouldntHaveRemainder = octets === 1 && remainder !== "";
         const nonfinalOctetMustHaveRemainder = octets > 1 && remainder === "";
-        if (octetValueOutOfRange || finalOctetShouldntHaveRemainder || nonfinalOctetMustHaveRemainder) {
+        if (
+            octetStartedWith0 ||
+            octetValueOutOfRange ||
+            finalOctetShouldntHaveRemainder ||
+            nonfinalOctetMustHaveRemainder
+        ) {
             continue;
         }
 

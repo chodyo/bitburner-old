@@ -8,6 +8,7 @@ enum command {
     triangle,
     largestPrimeFactor,
     stockTraderI,
+    stockTraderII,
 }
 function stringToCommand(o: string | number | boolean): command {
     return command[o.toString() as keyof typeof command];
@@ -15,7 +16,7 @@ function stringToCommand(o: string | number | boolean): command {
 
 const contractTypes = [
     "Algorithmic Stock Trader I", //        ✔
-    "Algorithmic Stock Trader II",
+    "Algorithmic Stock Trader II", //       ✔
     "Algorithmic Stock Trader III",
     "Algorithmic Stock Trader IV",
     "Array Jumping Game",
@@ -121,6 +122,10 @@ export async function main(ns: NS) {
                         answer = stockTraderI(data);
                         break;
 
+                    case "Algorithmic Stock Trader II":
+                        answer = stockTraderII(pricesWithOnlyUpwardTrends(data));
+                        break;
+
                     default:
                         return;
                 }
@@ -155,6 +160,12 @@ export async function main(ns: NS) {
         case command.stockTraderI: {
             const arg = JSON.parse(ns.args[1].toString());
             logger.info("=>", stockTraderI(arg));
+            break;
+        }
+
+        case command.stockTraderII: {
+            const arg = pricesWithOnlyUpwardTrends(JSON.parse(ns.args[1].toString()));
+            logger.info("=>", stockTraderII(arg));
             break;
         }
 
@@ -336,4 +347,65 @@ function stockTraderI(prices: number[]) {
     const pricesWithoutLow = [...prices.slice(0, l), ...prices.slice(l + 1)];
     const pricesWithoutHigh = [...prices.slice(0, h), ...prices.slice(h + 1)];
     return Math.max(stockTraderI(pricesWithoutLow), stockTraderI(pricesWithoutHigh));
+}
+
+/**
+ * Could improve this by adding caching since * this recalculates
+ * the "leaf" nodes (end of the trade chain) quite a bit
+ */
+function stockTraderII(trends: { low: number; high: number }[], stock = 0) {
+    if (trends.length === 0) {
+        return 0;
+    }
+
+    const ask = trends[0].low;
+    const bid = trends[0].high;
+    const theFuture = trends.slice(1);
+
+    if (stock === 0) {
+        const hodl = stockTraderII(theFuture, stock);
+        const buyNow = -ask + stockTraderII(theFuture, stock + 1);
+        const buyAndSell = bid - ask + hodl;
+        return Math.max(buyNow, buyAndSell, hodl);
+    }
+
+    const hodl = stockTraderII(theFuture, stock);
+    const sellNow = stockTraderII(theFuture, stock - 1) + bid;
+    return Math.max(sellNow, hodl);
+}
+
+function pricesWithOnlyUpwardTrends(prices: number[]) {
+    if (prices.length < 2) {
+        return [];
+    }
+
+    prices = prices
+        .filter((v, i, p) => {
+            // squish duplicates ahead of time because they really mess with my head
+            return i === p.length - 1 || v !== p[i + 1];
+        })
+        .filter((v, i, p) => {
+            const prev = p[i - 1];
+            const next = p[i + 1];
+
+            // front end is a special case
+            if (i === 0) {
+                return v < next;
+            }
+
+            // back end is also a special case
+            if (i === p.length - 1) {
+                return prev < v;
+            }
+
+            const isLocalMax = prev < v && v > next;
+            const isLocalMin = prev > v && v < next;
+            return isLocalMax || isLocalMin;
+        });
+
+    const upwardTrends: { low: number; high: number }[] = [];
+    for (let i = 0; i < prices.length; i += 2) {
+        upwardTrends.push({ low: prices[i], high: prices[i + 1] });
+    }
+    return upwardTrends;
 }

@@ -3,6 +3,8 @@ import { buyCheapestUpgrade } from "lib/Hacknet";
 import { desiredSavings } from "lib/Money";
 import { buyPservUpgrade } from "lib/Pserv";
 import { Logger } from "/lib/Logger";
+import { alreadyDeployed } from "/lib/Deploy";
+import { hackFilePath } from "/lib/Hack";
 
 export async function main(ns: NS) {
     const logger = new Logger(ns);
@@ -34,7 +36,8 @@ export async function main(ns: NS) {
 function shouldITryHackingSomeoneNew(ns: NS, myHackingLevel: number) {
     const justLeveledUp = ns.getPlayer().hacking !== myHackingLevel;
     const multipleOfTen = ns.getPlayer().hacking % 10 === 0;
-    if ((justLeveledUp && multipleOfTen) || ns.getPlayer().hacking === 1) {
+    const notRunning = !alreadyDeployed(ns, hackFilePath, "home");
+    if ((justLeveledUp && multipleOfTen) || notRunning) {
         return true;
     }
     // TODO: check for new programs on my home

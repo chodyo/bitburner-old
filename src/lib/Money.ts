@@ -4,13 +4,14 @@ import { Logger } from "/lib/Logger";
 /**
  * @description ns.nFormat formatting string for money
  */
-export const $ = "($0.00a)";
+export const $ = "$0.00a";
 
 export async function main(ns: NS) {
-    const logger = new Logger(ns);
+    const logger = new Logger(ns, { stdout: true });
     const serverMonies = new Map();
     getEveryAccessibleServerMonies(ns, serverMonies);
     logger.info("all server monies", serverMonies);
+    logger.info("savings", ns.nFormat(desiredSavings(ns), $));
 }
 
 /**
@@ -28,8 +29,7 @@ export async function main(ns: NS) {
  *          1000 => $316m
  */
 export function desiredSavings(ns: NS) {
-    const myHackLevel = ns.getPlayer().hacking;
-    return Math.pow(myHackLevel, 1.5) * 10000;
+    return exponentialBasedOnHackLevel(ns);
 }
 
 export function getEveryAccessibleServerMonies(ns: NS, serverMonies: Map<string, number>) {
@@ -49,4 +49,9 @@ function recursiveBankCheck(ns: NS, hostname: string, serverMonies: Map<string, 
         const remoteHost = remoteHosts[i];
         recursiveBankCheck(ns, remoteHost, serverMonies);
     }
+}
+
+function exponentialBasedOnHackLevel(ns: NS) {
+    const myHackLevel = ns.getPlayer().hacking;
+    return Math.pow(myHackLevel, 1.5) * 10000;
 }

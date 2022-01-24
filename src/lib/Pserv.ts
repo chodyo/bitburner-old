@@ -6,7 +6,11 @@ import { $, desiredSavings } from "/lib/Money";
 import { GB } from "/lib/Mem";
 
 export async function main(ns: NS) {
-    await buyPservUpgrade(ns);
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+        await buyPservUpgrade(ns);
+        await ns.asleep(60000);
+    }
 }
 
 export async function buyPservUpgrade(ns: NS) {
@@ -24,10 +28,10 @@ export async function buyPservUpgrade(ns: NS) {
         .sort((a, b) => a.ram - b.ram);
 
     const dollarsPerGig = 55000; // i think? just based on the store pages
-    const myCash = ns.getServerMoneyAvailable("home");
-    let ram = Math.floor(myCash / dollarsPerGig);
+    const spendableCash = ns.getServerMoneyAvailable("home") - desiredSavings(ns);
+    let ram = Math.floor(spendableCash / dollarsPerGig);
     let bitPos = 0;
-    while (ram !== 0) {
+    while (ram > 0) {
         bitPos++;
         ram >>= 1;
     }
@@ -36,14 +40,19 @@ export async function buyPservUpgrade(ns: NS) {
 
     const worthIt = ram >= 8;
     const isAnUpgrade = myPservs[0]?.ram < ram || true;
-    const iHaveEnoughSavings = myCash - ns.getPurchasedServerCost(ram) >= desiredSavings(ns);
-    if (!worthIt || !isAnUpgrade || !iHaveEnoughSavings) {
+    if (!worthIt || !isAnUpgrade) {
+        logger.trace(
+            `not buying any pservs worthIt=${worthIt} isAnUpgrade=${isAnUpgrade} ram=${ns.nFormat(
+                ram * 1e9,
+                GB
+            )} minPservRam=${ns.nFormat(myPservs[0]?.ram * 1e9 || 0, GB)} spareCash=${ns.nFormat(spendableCash, $)}`
+        );
         return;
     }
 
     logger.trace(
         "could buy a pserv",
-        ns.nFormat(myCash, $),
+        ns.nFormat(spendableCash, $),
         ns.nFormat(ns.getPurchasedServerCost(ram), $),
         ns.nFormat(ram * 1e9, GB)
     );

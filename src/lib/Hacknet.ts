@@ -1,9 +1,20 @@
 import { NS } from "Bitburner";
-import { desiredSavings } from "lib/Money";
+import { desiredSavings, $ } from "lib/Money";
 import { Logger } from "lib/Logger";
 
+enum upgrades {
+    purchase,
+    level,
+    ram,
+    cores,
+}
+
 export async function main(ns: NS) {
-    buyCheapestUpgrade(ns, desiredSavings(ns));
+    while (buyCheapestUpgrade(ns, desiredSavings(ns))) {
+        await ns.sleep(3000);
+    }
+    const logger = new Logger(ns);
+    logger.info("finished buying hacknet upgrades");
 }
 
 const maxToSpendOnHacknet = 1e9;
@@ -11,42 +22,70 @@ const maxToSpendOnHacknet = 1e9;
 export function buyCheapestUpgrade(ns: NS, maxMoneyKeep: number) {
     const logger = new Logger(ns);
 
-    const cheapest = {
-        cost: maxToSpendOnHacknet,
-        runUpgradeFn: function noUpgrade(_index: number, _n: number) {
-            return;
-        },
-        upgradeFnParam: 0,
+    const cheapest = cheapestUpgrade(ns);
+    if (cheapest.cost > maxToSpendOnHacknet) {
+        return false;
+    }
+
+    const cash = ns.getServerMoneyAvailable("home");
+    if (cash < cheapest.cost + maxMoneyKeep) {
+        logger.info(
+            `not upgrading hacknet cash=${ns.nFormat(cash, $)} cost=${ns.nFormat(
+                cheapest.cost,
+                $
+            )} savings=${ns.nFormat(maxMoneyKeep, $)}`
+        );
+        return true;
+    }
+
+    let result: number | boolean | string | undefined = undefined;
+    switch (cheapest.fn) {
+        case upgrades.purchase:
+            result = ns.hacknet.purchaseNode();
+            break;
+        case upgrades.level:
+            result = ns.hacknet.upgradeLevel(cheapest.n, 1);
+            break;
+        case upgrades.ram:
+            result = ns.hacknet.upgradeRam(cheapest.n, 1);
+            break;
+        case upgrades.cores:
+            result = ns.hacknet.upgradeCore(cheapest.n, 1);
+            break;
+        default:
+            logger.error(`unexpected hacknet upgrade=${upgrades[cheapest.fn]}`);
+            return false;
+    }
+    logger.info(`upgraded hacknet upgrade=${upgrades[cheapest.fn]} node=${cheapest.n} result=${result}`);
+    return true;
+}
+
+function cheapestUpgrade(ns: NS) {
+    const h = ns.hacknet;
+
+    const c = {
+        cost: h.numNodes() < h.maxNumNodes() ? h.getPurchaseNodeCost() : Infinity,
+        fn: upgrades.purchase,
+        n: -1,
+        roi: 0, // todo
     };
 
-    if (ns.hacknet.numNodes() < ns.hacknet.maxNumNodes()) {
-        const newNodeCost = ns.hacknet.getPurchaseNodeCost();
-        if (newNodeCost < cheapest.cost) {
-            cheapest.cost = newNodeCost;
-            cheapest.runUpgradeFn = ns.hacknet.purchaseNode;
-        }
-    }
+    Array(h.numNodes())
+        .fill(undefined)
+        .forEach((_, i) => {
+            const levelCost = h.getLevelUpgradeCost(i, 1);
+            const ramCost = h.getRamUpgradeCost(i, 1);
+            const coresCost = h.getCoreUpgradeCost(i, 1);
 
-    for (let i = 0; i < ns.hacknet.numNodes(); i++) {
-        [
-            { cost: ns.hacknet.getRamUpgradeCost(i, 1), upgradeFn: ns.hacknet.upgradeRam },
-            { cost: ns.hacknet.getCoreUpgradeCost(i, 1), upgradeFn: ns.hacknet.upgradeCore },
-            { cost: ns.hacknet.getCacheUpgradeCost(i, 1), upgradeFn: ns.hacknet.upgradeCache },
-            { cost: ns.hacknet.getLevelUpgradeCost(i, 1), upgradeFn: ns.hacknet.upgradeLevel },
-        ].forEach((upgrader) => {
-            if (upgrader.cost < cheapest.cost) {
-                cheapest.cost = upgrader.cost;
-                cheapest.runUpgradeFn = upgrader.upgradeFn;
-                cheapest.upgradeFnParam = i;
+            const minCost = Math.min(levelCost, ramCost, coresCost);
+            if (minCost > c.cost) {
+                return;
             }
-        });
-    }
 
-    if (cheapest.cost === maxToSpendOnHacknet) {
-        return false;
-    } else if (ns.getServerMoneyAvailable("home") >= cheapest.cost + maxMoneyKeep) {
-        logger.info("upgrading hacknet", cheapest.runUpgradeFn.name, cheapest.upgradeFnParam);
-        cheapest.runUpgradeFn(cheapest.upgradeFnParam, 1);
-    }
-    return true;
+            c.cost = minCost;
+            c.fn = minCost === levelCost ? upgrades.level : minCost === ramCost ? upgrades.ram : upgrades.cores;
+            c.n = i;
+        });
+
+    return c;
 }

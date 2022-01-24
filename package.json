@@ -6,7 +6,7 @@
     "clean": "rm -rf build/*",
     "copyResources": "mkdir -p src/resources && cp -r src/resources/ build/",
     "re": "npm-run-all clean updateDefs buildTs copyResources buildManifest",
-    "updateDefs": "bin/updateTsDefinitions.bash",
+    "updateDefs": "bin/updateTsDefinitions.bash && prettier --write src/lib/Bitburner.t.ts",
     "webserver": "node bin/webserver.js -p 9182 -d build --enable_cors"
   },
   "devDependencies": {
@@ -15,6 +15,7 @@
     "eslint": "^8.7.0",
     "eslint-config-prettier": "^8.3.0",
     "npm-run-all": "^4.1.5",
+    "prettier": "2.5.1",
     "typescript": "^4.5.4"
   }
 }

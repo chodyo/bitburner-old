@@ -1,6 +1,7 @@
 import { NS } from "Bitburner";
 import { desiredSavings, $ } from "lib/Money";
 import { Logger } from "lib/Logger";
+import { hasSourceFile } from "lib/SourceFiles";
 
 enum upgrades {
     purchase,
@@ -10,19 +11,32 @@ enum upgrades {
 }
 
 export async function main(ns: NS) {
-    const logger = new Logger(ns, { stdout: true });
+    const logger = new Logger(ns, { stdout: false });
 
     const n = ns.args[0] as number;
     const node = ns.hacknet.getNodeStats(n);
-    const levelUpgrade = ns.hacknet.getLevelUpgradeCost(n, 1) === Infinity ? node.level : node.level + 1;
-    const ramUpgrade = ns.hacknet.getRamUpgradeCost(n, 1) === Infinity ? node.ram : node.ram * 2;
-    const coreUpgrade = ns.hacknet.getCoreUpgradeCost(n, 1) === Infinity ? node.cores : node.cores + 1;
+    const baseMoneyGainRate = moneyGainRate(ns, { n: n });
+    const levelUpgrade =
+        moneyGainRate(ns, {
+            n: n,
+            level: ns.hacknet.getLevelUpgradeCost(n, 1) === Infinity ? node.level : node.level + 1,
+        }) - baseMoneyGainRate;
+    const ramUpgrade =
+        moneyGainRate(ns, {
+            n: n,
+            ram: ns.hacknet.getRamUpgradeCost(n, 1) === Infinity ? node.ram : node.ram * 2,
+        }) - baseMoneyGainRate;
+    const coreUpgrade =
+        moneyGainRate(ns, {
+            n: n,
+            cores: ns.hacknet.getCoreUpgradeCost(n, 1) === Infinity ? node.cores : node.cores + 1,
+        }) - baseMoneyGainRate;
     logger.info(`
-        production=${ns.nFormat(node.production, $)}/sec
-        level=+${ns.nFormat(moneyGainRate(ns, { n: n, level: levelUpgrade }) - node.production, $)}/sec
-        ram=+${ns.nFormat(moneyGainRate(ns, { n: n, ram: ramUpgrade }) - node.production, $)}/sec
-        core=+${ns.nFormat(moneyGainRate(ns, { n: n, cores: coreUpgrade }) - node.production, $)}/sec`);
-    return;
+        node production=${ns.nFormat(node.production, $)}/sec level=${node.level} ram=${node.ram} cores=${node.cores}
+        level=${levelUpgrade} => +${ns.nFormat(levelUpgrade, $)}/sec
+        ram=${ramUpgrade} => +${ns.nFormat(ramUpgrade, $)}/sec
+        cores=${coreUpgrade} => +${ns.nFormat(coreUpgrade, $)}/sec`);
+    // return;
 
     while (buyCheapestUpgrade(ns, desiredSavings(ns))) {
         await ns.sleep(60000);
@@ -129,8 +143,15 @@ function moneyGainRate(
     const ramMult = Math.pow(1.035, opts.ram! - 1);
     const coresMult = (opts.cores! + 5) / 6;
 
-    // BitNodeMultipliers.HacknetNodeMoney - presumably this will be built in to the production multiplier?
-    const bitNodeMult = 1;
+    // BitNodeMultipliers.HacknetNodeMoney
+    let bitNodeMult = 1;
+    if (hasSourceFile(ns, 5, 1)) {
+        bitNodeMult = ns.getBitNodeMultipliers().HacknetNodeMoney;
+    } else {
+        const logger = new Logger(ns, { stdout: true });
+        bitNodeMult = 0.05;
+        logger.warn(`hard coded bitNodeMult=${bitNodeMult} for SF4.1`);
+    }
 
     return levelMult * ramMult * coresMult * mult * bitNodeMult;
 }

@@ -1,7 +1,9 @@
 import { NS } from "Bitburner";
-import { desiredSavings, $ } from "lib/Money";
+import { $ } from "lib/Money";
 import { Logger } from "lib/Logger";
 import { hasSourceFile } from "lib/SourceFiles";
+
+const minRoiRecoverySeconds = 30 * 60;
 
 enum upgrades {
     purchase,
@@ -13,7 +15,7 @@ enum upgrades {
 export async function main(ns: NS) {
     const logger = new Logger(ns, { stdout: false });
 
-    const n = ns.args[0] as number;
+    const n = (ns.args[0] as number) || 0;
     const node = ns.hacknet.getNodeStats(n);
     const baseMoneyGainRate = moneyGainRate(ns, { n: n });
     const levelUpgrade =
@@ -36,37 +38,32 @@ export async function main(ns: NS) {
         level=${levelUpgrade} => +${ns.nFormat(levelUpgrade, $)}/sec
         ram=${ramUpgrade} => +${ns.nFormat(ramUpgrade, $)}/sec
         cores=${coreUpgrade} => +${ns.nFormat(coreUpgrade, $)}/sec`);
-    // return;
 
-    while (buyCheapestUpgrade(ns, desiredSavings(ns))) {
+    while (true) {
+        // once every 60 seconds
+        let upgradeTimes = 0;
+        while (buyCheapestUpgrade(ns)) {
+            // buy everything that's worth it as fast as i can
+            upgradeTimes++;
+            await ns.sleep(10);
+        }
+        logger.info(`finished buying ${upgradeTimes} hacknet upgrades`);
         await ns.sleep(60000);
     }
-    logger.info("finished buying hacknet upgrades");
+    logger.info("exiting");
 }
 
-const maxToSpendOnHacknet = 1e9;
-
-export function buyCheapestUpgrade(ns: NS, maxMoneyKeep: number) {
+export function buyCheapestUpgrade(ns: NS) {
     const logger = new Logger(ns);
 
     const cheapest = cheapestUpgrade(ns);
-    if (cheapest.cost > maxToSpendOnHacknet) {
+
+    if (!shouldBuyCheapestUpgrade(ns, cheapest.cost, cheapest.upgradeType, cheapest.n)) {
         return false;
     }
 
-    const cash = ns.getServerMoneyAvailable("home");
-    if (cash < cheapest.cost + maxMoneyKeep) {
-        logger.info(
-            `not upgrading hacknet cash=${ns.nFormat(cash, $)} cost=${ns.nFormat(
-                cheapest.cost,
-                $
-            )} savings=${ns.nFormat(maxMoneyKeep, $)}`
-        );
-        return true;
-    }
-
     let result: number | boolean | string | undefined = undefined;
-    switch (cheapest.fn) {
+    switch (cheapest.upgradeType) {
         case upgrades.purchase:
             result = ns.hacknet.purchaseNode();
             break;
@@ -80,10 +77,10 @@ export function buyCheapestUpgrade(ns: NS, maxMoneyKeep: number) {
             result = ns.hacknet.upgradeCore(cheapest.n, 1);
             break;
         default:
-            logger.error(`unexpected hacknet upgrade=${upgrades[cheapest.fn]}`);
+            logger.error(`unexpected hacknet upgrade=${upgrades[cheapest.upgradeType]}`);
             return false;
     }
-    logger.info(`upgraded hacknet upgrade=${upgrades[cheapest.fn]} node=${cheapest.n} result=${result}`);
+    logger.info(`upgraded hacknet upgrade=${upgrades[cheapest.upgradeType]} node=${cheapest.n} result=${result}`);
     return true;
 }
 
@@ -92,7 +89,7 @@ function cheapestUpgrade(ns: NS) {
 
     const c = {
         cost: h.numNodes() < h.maxNumNodes() ? h.getPurchaseNodeCost() : Infinity,
-        fn: upgrades.purchase,
+        upgradeType: upgrades.purchase,
         n: -1,
     };
 
@@ -109,13 +106,48 @@ function cheapestUpgrade(ns: NS) {
             }
 
             c.cost = minCost;
-            c.fn = minCost === levelCost ? upgrades.level : minCost === ramCost ? upgrades.ram : upgrades.cores;
+            c.upgradeType =
+                minCost === levelCost ? upgrades.level : minCost === ramCost ? upgrades.ram : upgrades.cores;
             c.n = i;
         });
 
     return c;
 }
 
+function shouldBuyCheapestUpgrade(ns: NS, cost: number, upgradeType: upgrades, n: number) {
+    const h = ns.hacknet;
+    const cash = ns.getServerMoneyAvailable("home");
+    let rate = 0;
+    switch (upgradeType) {
+        case upgrades.purchase:
+            rate = moneyGainRate(ns, { level: 1, ram: 1, cores: 1 });
+            break;
+        case upgrades.level:
+            rate = moneyGainRate(ns, { n: n, level: h.getNodeStats(n).level + 1 });
+            break;
+        case upgrades.ram:
+            rate = moneyGainRate(ns, { n: n, ram: h.getNodeStats(n).ram * 2 });
+            break;
+        case upgrades.cores:
+            rate = moneyGainRate(ns, { n: n, level: h.getNodeStats(n).cores + 1 });
+            break;
+        default:
+            return false;
+    }
+
+    const haveEnoughCash = cash >= cost;
+    const roiQuickly = cost / rate <= minRoiRecoverySeconds;
+    const excessiveWealthRatio = cost / rate <= cash / cost;
+
+    return haveEnoughCash && (roiQuickly || excessiveWealthRatio);
+}
+
+/**
+ * @param opts.n The ID of the hacknet node
+ * @param opts.level The new level
+ * @param opts.ram amount The new ram amount
+ * @param opts.cores The new number of cores
+ */
 function moneyGainRate(
     ns: NS,
     opts: {

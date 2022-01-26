@@ -3,7 +3,6 @@ import { Logger } from "lib/Logger";
 import { hasSourceFile } from "lib/SourceFiles";
 
 const minRoiRecoverySeconds = 30 * 60;
-let bitNodeMult = 1;
 
 enum upgrades {
     purchase = "purchase",
@@ -14,18 +13,9 @@ enum upgrades {
 
 export async function main(ns: NS) {
     const logger = new Logger(ns);
+    logger.alert(`reminder: hard coded bitNodeMult=${getBitnodeMult(ns)} for SF4.1`, "warning");
 
-    // BitNodeMultipliers.HacknetNodeMoney
-    bitNodeMult = 1;
-    if (hasSourceFile(ns, 5, 1)) {
-        bitNodeMult = ns.getBitNodeMultipliers().HacknetNodeMoney;
-    } else {
-        bitNodeMult = 0.05;
-        logger.alert(`reminder: hard coded bitNodeMult=${bitNodeMult} for SF4.1`, "warning");
-    }
-
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
+    while (hacknetUpgradable(ns)) {
         let upgradeCount = 0;
         while (buyHacknetUpgrade(ns)) {
             // buy everything that's worth it as fast as i can
@@ -37,7 +27,24 @@ export async function main(ns: NS) {
         }
         await ns.sleep(60000);
     }
-    logger.toast("exiting Hacknet buyer", "error");
+    logger.toast("exiting Hacknet buyer", "info");
+}
+
+function hacknetUpgradable(ns: NS) {
+    const h = ns.hacknet;
+
+    if (h.numNodes < h.maxNumNodes) {
+        return true;
+    }
+
+    return Array(h.maxNumNodes())
+        .fill(undefined)
+        .some(
+            (_, n) =>
+                h.getLevelUpgradeCost(n, 1) < Infinity ||
+                h.getRamUpgradeCost(n, 1) < Infinity ||
+                h.getCoreUpgradeCost(n, 1) < Infinity
+        );
 }
 
 export function buyHacknetUpgrade(ns: NS) {
@@ -126,15 +133,24 @@ function moneyGainRate(
     level: number,
     ram: number,
     cores: number,
-    mult = ns.getHacknetMultipliers().production
+    hacknetProductionMult = ns.getHacknetMultipliers().production,
+    bitNodeMult = getBitnodeMult(ns)
 ) {
     // HacknetNodeConstants.MoneyGainPerLevel
-    // this seems actually constant (compare with bitNodeMult)
+    // this seems actually constant (compared to bitNodeMult)
     const gainPerLevel = 1.5;
 
     const levelMult = level * gainPerLevel;
     const ramMult = Math.pow(1.035, ram - 1);
     const coresMult = (cores + 5) / 6;
 
-    return levelMult * ramMult * coresMult * mult * bitNodeMult;
+    return levelMult * ramMult * coresMult * hacknetProductionMult * bitNodeMult;
+}
+
+function getBitnodeMult(ns: NS) {
+    // BitNodeMultipliers.HacknetNodeMoney
+    if (hasSourceFile(ns, 5, 1)) {
+        return ns.getBitNodeMultipliers().HacknetNodeMoney;
+    }
+    return 0.05;
 }

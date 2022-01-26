@@ -33,7 +33,7 @@ export async function main(ns: NS) {
 function hacknetUpgradable(ns: NS) {
     const h = ns.hacknet;
 
-    if (h.numNodes < h.maxNumNodes) {
+    if (h.numNodes() < h.maxNumNodes() || h.maxNumNodes() === Infinity) {
         return true;
     }
 

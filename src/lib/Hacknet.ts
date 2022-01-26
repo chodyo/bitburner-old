@@ -21,9 +21,10 @@ export async function main(ns: NS) {
         bitNodeMult = ns.getBitNodeMultipliers().HacknetNodeMoney;
     } else {
         bitNodeMult = 0.05;
-        new Logger(ns, { stdout: true }).warn(`reminder: hard coded bitNodeMult=${bitNodeMult} for SF4.1`);
+        logger.alert(`reminder: hard coded bitNodeMult=${bitNodeMult} for SF4.1`, "warning");
     }
 
+    // eslint-disable-next-line no-constant-condition
     while (true) {
         let upgradeCount = 0;
         while (buyHacknetUpgrade(ns)) {
@@ -32,11 +33,11 @@ export async function main(ns: NS) {
             await ns.sleep(10);
         }
         if (upgradeCount > 0) {
-            logger.info(`finished buying ${upgradeCount} hacknet upgrades`);
+            logger.toast(`finished buying ${upgradeCount} hacknet upgrades :)`);
         }
         await ns.sleep(60000);
     }
-    logger.info("exiting");
+    logger.toast("exiting Hacknet buyer", "error");
 }
 
 export function buyHacknetUpgrade(ns: NS) {

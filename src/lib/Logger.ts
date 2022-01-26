@@ -37,6 +37,42 @@ class Logger {
         }
     }
 
+    alert(msg: string, variant: "success" | "info" | "warning" | "error" = "success") {
+        this.ns.alert(msg);
+
+        switch (variant) {
+            case "error":
+                this.error(msg);
+                break;
+            case "warning":
+                this.warn(msg);
+                break;
+            case "success":
+            case "info":
+            default:
+                this.info(msg);
+                break;
+        }
+    }
+
+    toast(msg: string, variant: "success" | "info" | "warning" | "error" = "success", duration = 2000) {
+        this.ns.toast(msg, variant, duration);
+
+        switch (variant) {
+            case "error":
+                this.error(msg);
+                break;
+            case "warning":
+                this.warn(msg);
+                break;
+            case "success":
+            case "info":
+            default:
+                this.info(msg);
+                break;
+        }
+    }
+
     trace(msg: string, ...args: any[]) {
         this.log(msg, this.caller(), Logger.TRACE_LITERAL, ...args);
     }

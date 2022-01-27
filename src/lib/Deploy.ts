@@ -50,7 +50,8 @@ function removeScriptOnRemoteHost(ns: NS, filename: string, hostname: string) {
 }
 
 /**
- * @description Check if script is already running on a machine
+ * @description Check if script is already running on a machine.
+ * Cheaper ram cost than `ns.scriptRunning`.
  */
 export function alreadyDeployed(ns: NS, filename: string, hostname: string, ...args: any[]) {
     const scriptInfo = ns.getRunningScript(filename, hostname, ...args);

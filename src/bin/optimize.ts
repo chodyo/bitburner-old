@@ -1,7 +1,4 @@
 import { NS } from "Bitburner";
-import { buyCheapestUpgrade } from "lib/Hacknet";
-import { desiredSavings } from "lib/Money";
-import { buyPservUpgrade } from "lib/Pserv";
 import { Logger } from "/lib/Logger";
 import { alreadyDeployed } from "/lib/Deploy";
 import { hackFilePath } from "/lib/Hack";
@@ -10,28 +7,44 @@ export async function main(ns: NS) {
     const logger = new Logger(ns);
     logger.trace("starting");
 
-    var isHacknetUpgradable = true;
-    var myHackingLevel = 0; // TODO: make an event channel via ports
-    // TODO: stop optimize if already running
+    const backgroundScripts = ["/lib/Home.js", "/lib/Hacknet.js", "/lib/Pserv.js"];
 
-    while (1) {
-        if (isHacknetUpgradable) {
-            isHacknetUpgradable = buyCheapestUpgrade(ns, desiredSavings(ns));
-        }
-
-        await buyPservUpgrade(ns);
-
-        if (shouldITryHackingSomeoneNew(ns, myHackingLevel)) {
-            logger.trace(`redeploying hack scripts`);
-            ns.run("/bin/startHack.js");
-        }
-
-        // TODO: check for new programs to create and create them
-
-        myHackingLevel = ns.getPlayer().hacking;
-        await ns.asleep(3000);
+    while (true) {
+        backgroundScripts.forEach((filename) => {
+            if (alreadyDeployed(ns, filename, "home")) return;
+            const result: "success" | "error" = ns.run(filename) ? "success" : "error";
+            logger.toast(`running script ${filename} on home: ${result}`, result);
+        });
+        await ns.asleep(60000);
     }
 }
+
+// export async function main(ns: NS) {
+//     const logger = new Logger(ns);
+//     logger.trace("starting");
+
+//     var isHacknetUpgradable = true;
+//     var myHackingLevel = 0; // TODO: make an event channel via ports
+//     // TODO: stop optimize if already running
+
+//     while (1) {
+//         if (isHacknetUpgradable) {
+//             isHacknetUpgradable = buyHacknetUpgrade(ns, desiredSavings(ns));
+//         }
+
+//         await buyPservUpgrade(ns);
+
+//         if (shouldITryHackingSomeoneNew(ns, myHackingLevel)) {
+//             logger.trace(`redeploying hack scripts`);
+//             ns.run("/bin/startHack.js");
+//         }
+
+//         // TODO: check for new programs to create and create them
+
+//         myHackingLevel = ns.getPlayer().hacking;
+//         await ns.asleep(3000);
+//     }
+// }
 
 function shouldITryHackingSomeoneNew(ns: NS, myHackingLevel: number) {
     const justLeveledUp = ns.getPlayer().hacking !== myHackingLevel;
@@ -54,6 +67,6 @@ function shouldITryHackingSomeoneNew(ns: NS, myHackingLevel: number) {
 // DeepscanV2.exe: 400
 // HTTPWorm.exe: 500
 // SQLInject.exe: 750
-function programs(ns: NS) {
-    ns.createProgram("ftpcrack.exe");
-}
+// function programs(ns: NS) {
+//     ns.createProgram("ftpcrack.exe");
+// }

@@ -7,8 +7,13 @@ export async function main(ns: NS) {
     const logger = new Logger(ns);
     logger.trace("starting");
 
-    const backgroundScripts = ["/lib/Home.js", "/lib/Hacknet.js", "/lib/Pserv.js", "/lib/Faction.js"];
+    const oneTimeScripts = ["/bin/startHack.js"];
+    oneTimeScripts.forEach((filename) => {
+        const result: "success" | "error" = ns.run(filename) ? "success" : "error";
+        logger.toast(`running script ${filename} on home: ${result}`, result);
+    });
 
+    const backgroundScripts = ["/lib/Home.js", "/lib/Hacknet.js", "/lib/Pserv.js", "/lib/Faction.js"];
     while (true) {
         backgroundScripts.forEach((filename) => {
             if (alreadyDeployed(ns, filename, "home")) return;

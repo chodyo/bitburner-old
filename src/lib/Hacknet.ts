@@ -105,15 +105,15 @@ function bestUpgrade(ns: NS) {
             const levelRate = levelCost === Infinity ? 0 : moneyGainRate(ns, node.level + 1, node.ram, node.cores);
             const ramRate = ramCost === Infinity ? 0 : moneyGainRate(ns, node.level, node.ram * 2, node.cores);
             const coresRate = coresCost === Infinity ? 0 : moneyGainRate(ns, node.level, node.ram, node.cores + 1);
-            const minRate = Math.min(levelRate, ramRate, coresRate);
-            if (minRate <= c.extraCashRate) {
+            const bestRate = Math.max(levelRate, ramRate, coresRate);
+            if (bestRate <= c.extraCashRate) {
                 return;
             }
 
-            c.cost = minRate === levelRate ? levelCost : minRate === ramRate ? ramCost : coresCost;
-            c.extraCashRate = minRate - baseRate;
+            c.cost = bestRate === levelRate ? levelCost : bestRate === ramRate ? ramCost : coresCost;
+            c.extraCashRate = bestRate - baseRate;
             c.upgradeType =
-                minRate === levelRate ? upgrades.level : minRate === ramRate ? upgrades.ram : upgrades.cores;
+                bestRate === levelRate ? upgrades.level : bestRate === ramRate ? upgrades.ram : upgrades.cores;
             c.n = n;
         });
 

@@ -14,6 +14,7 @@ enum upgrades {
 export async function main(ns: NS) {
     const logger = new Logger(ns);
     logger.alert(`reminder: hard coded bitNodeMult=${getBitnodeMult(ns)} for SF4.1`, "warning");
+    logger.info(`hacknet production mult ${ns.getHacknetMultipliers().production}`);
 
     while (hacknetUpgradable(ns)) {
         let upgradeCount = 0;
@@ -51,6 +52,7 @@ export function buyHacknetUpgrade(ns: NS) {
     const logger = new Logger(ns);
 
     const best = bestUpgrade(ns);
+    logger.info(`best hacknet upgrade: ${JSON.stringify(best)}`);
 
     if (!shouldIBuyUpgrade(ns, best.cost, best.extraCashRate)) {
         return false;

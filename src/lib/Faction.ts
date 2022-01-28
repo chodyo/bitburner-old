@@ -16,11 +16,26 @@ const infinitelyUpgradableAug = "NeuroFlux Governor";
 export async function main(ns: NS) {
     const logger = new Logger(ns);
 
-    let currentFactionState: "joinFaction" | "buyAugs" | "buyNeuroFluxGovernor" | "installAugs" = "joinFaction";
+    let currentFactionState: "joinFaction" | "getRep" | "buyAugs" | "buyNeuroFluxGovernor" | "installAugs" =
+        "joinFaction";
     while (true) {
         switch (currentFactionState) {
-            case "joinFaction":
+            case "joinFaction": {
+                const joined = joinFactionWithAugsToBuy(ns);
+                if (joined) {
+                    logger.toast("joined a faction with augs to buy");
+                    currentFactionState = "getRep";
+                }
                 break;
+            }
+            case "getRep": {
+                const maxxed = getEnoughRep(ns);
+                if (maxxed) {
+                    logger.toast("have enough rep to buy augs");
+                    currentFactionState = "buyAugs";
+                }
+                break;
+            }
             case "buyAugs": {
                 const noneLeft = buyAugs(ns);
                 if (noneLeft) {
@@ -46,6 +61,14 @@ export async function main(ns: NS) {
         await ns.sleep(60000);
     }
     logger.toast("exiting augments buyer", "info");
+}
+
+function joinFactionWithAugsToBuy(_ns: NS) {
+    return false;
+}
+
+function getEnoughRep(_ns: NS) {
+    return false;
 }
 
 /**

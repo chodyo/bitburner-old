@@ -16,14 +16,30 @@ const infinitelyUpgradableAug = "NeuroFlux Governor";
 export async function main(ns: NS) {
     const logger = new Logger(ns);
 
-    let currentFactionState = "buyAugs";
+    let currentFactionState: "joinFaction" | "buyAugs" | "buyNeuroFluxGovernor" | "installAugs" = "joinFaction";
     while (true) {
         switch (currentFactionState) {
+            case "joinFaction":
+                break;
             case "buyAugs": {
                 const noneLeft = buyAugs(ns);
                 if (noneLeft) {
+                    logger.toast("done buying augs");
                     currentFactionState = "buyNeuroFluxGovernor";
                 }
+                break;
+            }
+            case "buyNeuroFluxGovernor": {
+                const outOfMoney = buyNeuroFluxGovernor(ns);
+                if (outOfMoney) {
+                    logger.toast("done buying neuroflux governor upgrades");
+                    currentFactionState = "installAugs";
+                }
+                break;
+            }
+            case "installAugs": {
+                logger.toast("installing augs");
+                installAugs(ns);
                 break;
             }
         }
@@ -41,6 +57,7 @@ function buyAugs(ns: NS) {
     const includePurchased = true;
     const playerAugs = ns.getOwnedAugmentations(includePurchased);
 
+    // figure out what needs buying
     const augs = ns
         .getPlayer()
         .factions.flatMap((faction) => {
@@ -48,16 +65,23 @@ function buyAugs(ns: NS) {
                 faction: faction,
                 name: aug,
                 price: ns.getAugmentationPrice(aug),
+                prereqs: ns.getAugmentationPrereq(aug),
             }));
         })
         .filter((aug) => !playerAugs.includes(aug.name))
         .filter((aug) => aug.name !== infinitelyUpgradableAug)
-        .sort((a, b) => b.price - a.price);
+        .sort((a, b) => {
+            if (a.prereqs.includes(b.name)) return 1;
+            if (b.prereqs.includes(a.name)) return -1;
+            return b.price - a.price;
+        });
 
+    // already bought everything
     if (augs.length === 0) {
         return true;
     }
 
+    // save money
     if (augs[0].price > ns.getServerMoneyAvailable("home")) {
         // todo: maybe come up with a better way of doing this
         const scriptsThatCostMeMoney = ["/bin/optimize.js", "/lib/Home.js", "/lib/Pserv.js", "/lib/Hacknet.js"];
@@ -70,6 +94,7 @@ function buyAugs(ns: NS) {
             });
     }
 
+    // buy
     while (augs.length > 0 && augs[0].price <= ns.getServerMoneyAvailable("home")) {
         const aug = augs.shift();
         if (aug === undefined) {
@@ -77,15 +102,37 @@ function buyAugs(ns: NS) {
         }
         if (!ns.purchaseAugmentation(aug.faction, aug.name)) {
             throw new Error(
-                `tried to buy an augmentation but failed ${aug.faction} ${aug.name} ${
-                    aug.price
-                } ${ns.getServerMoneyAvailable("home")}`
+                `tried to buy an aug but failed ${aug.faction} ${aug.name} ${aug.price} ${ns.getServerMoneyAvailable(
+                    "home"
+                )}`
             );
         }
+        logger.info(`bought ${aug.faction} ${aug.name}`);
     }
 
     logger.info("leftover augs", augs);
     logger.info("owned augs", playerAugs);
 
     return augs.length === 0;
+}
+
+function buyNeuroFluxGovernor(ns: NS) {
+    const logger = new Logger(ns);
+
+    if (ns.getPlayer().factions.length === 0) {
+        throw new Error("can't buy neuroflux without a faction");
+    }
+    const faction = ns.getPlayer().factions[0];
+
+    while (ns.getServerMoneyAvailable("home") >= ns.getAugmentationPrice(infinitelyUpgradableAug)) {
+        if (!ns.purchaseAugmentation(faction, infinitelyUpgradableAug)) {
+            throw new Error(`tried to buy an aug but failed ${faction} ${infinitelyUpgradableAug}`);
+        }
+        logger.info(`bought ${faction} ${infinitelyUpgradableAug}`);
+    }
+    return true;
+}
+
+function installAugs(ns: NS) {
+    ns.installAugmentations("/bin/optimize.js");
 }

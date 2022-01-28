@@ -80,7 +80,7 @@ export function buyHacknetUpgrade(ns: NS) {
 }
 
 /**
- * "Best" is defined by the highest cost/return ratio
+ * "Best" is defined by the lowest cost/extraRate ratio (fastest time to recovery)
  */
 function bestUpgrade(ns: NS) {
     const h = ns.hacknet;
@@ -102,19 +102,33 @@ function bestUpgrade(ns: NS) {
             const ramCost = h.getRamUpgradeCost(n, 1);
             const coresCost = h.getCoreUpgradeCost(n, 1);
 
-            const levelRate = levelCost === Infinity ? 0 : moneyGainRate(ns, node.level + 1, node.ram, node.cores);
-            const ramRate = ramCost === Infinity ? 0 : moneyGainRate(ns, node.level, node.ram * 2, node.cores);
-            const coresRate = coresCost === Infinity ? 0 : moneyGainRate(ns, node.level, node.ram, node.cores + 1);
-            const bestRate = Math.max(levelRate, ramRate, coresRate);
-            if (bestRate <= c.extraCashRate) {
-                return;
+            const levelRate =
+                levelCost === Infinity ? 0 : moneyGainRate(ns, node.level + 1, node.ram, node.cores) - baseRate;
+            const ramRate =
+                ramCost === Infinity ? 0 : moneyGainRate(ns, node.level, node.ram * 2, node.cores) - baseRate;
+            const coresRate =
+                coresCost === Infinity ? 0 : moneyGainRate(ns, node.level, node.ram, node.cores + 1) - baseRate;
+
+            if (levelCost / levelRate < c.cost / c.extraCashRate) {
+                c.cost = levelCost;
+                c.extraCashRate = levelRate;
+                c.upgradeType = upgrades.level;
+                c.n = n;
             }
 
-            c.cost = bestRate === levelRate ? levelCost : bestRate === ramRate ? ramCost : coresCost;
-            c.extraCashRate = bestRate - baseRate;
-            c.upgradeType =
-                bestRate === levelRate ? upgrades.level : bestRate === ramRate ? upgrades.ram : upgrades.cores;
-            c.n = n;
+            if (ramCost / ramRate < c.cost / c.extraCashRate) {
+                c.cost = ramCost;
+                c.extraCashRate = ramRate;
+                c.upgradeType = upgrades.ram;
+                c.n = n;
+            }
+
+            if (coresCost / coresRate < c.cost / c.extraCashRate) {
+                c.cost = coresCost;
+                c.extraCashRate = coresRate;
+                c.upgradeType = upgrades.cores;
+                c.n = n;
+            }
         });
 
     return c;

@@ -7,7 +7,7 @@ export async function main(ns: NS) {
     const logger = new Logger(ns);
     logger.trace("starting");
 
-    const backgroundScripts = ["/lib/Home.js", "/lib/Hacknet.js", "/lib/Pserv.js"];
+    const backgroundScripts = ["/lib/Home.js", "/lib/Hacknet.js", "/lib/Pserv.js", "/lib/Faction.js"];
 
     while (true) {
         backgroundScripts.forEach((filename) => {

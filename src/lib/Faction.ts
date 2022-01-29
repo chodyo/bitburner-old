@@ -7,17 +7,22 @@ enum Factions {
     CyberSec = "CyberSec",
     TianDiHui = "Tian Di Hui",
     Netburners = "Netburners",
-}
 
-// factions is going to be weird and crazy because it'll have different phases
-// start: no factions
-// next: get invite
-// next: join, no rep
-// get rep*, eventually have enough rep to buy everything
-// buy most expensive until i have everything
-// buy as many neuroflux gov as i can
-// install augments
-// repeat
+    Sector12 = "Sector-12",
+    Chongqing = "Chongqing",
+    NewTokyo = "New Tokyo",
+    Ishima = "Ishima",
+    Aevum = "Aevum",
+    Volhaven = "Volhaven",
+
+    NiteSec = "NiteSec",
+    TheBlackHand = "The Black Hand",
+    BitRunners = "BitRunners",
+
+    TheCovenant = "The Covenant",
+    Daedalus = "Daedalus",
+    Illuminati = "Illuminati",
+}
 
 export async function main(ns: NS) {
     const logger = new Logger(ns);
@@ -208,7 +213,7 @@ async function induceFactionInvite(ns: NS) {
     const logger = new Logger(ns);
 
     let firstFactionWithUnownedAugs: string | undefined = undefined;
-    for (const faction in Factions) {
+    for (const faction of Object.values(Factions)) {
         if (unownedUninstalledAugmentsFromFactions(ns, [faction]).length > 0) {
             firstFactionWithUnownedAugs = faction;
             break;
@@ -217,6 +222,7 @@ async function induceFactionInvite(ns: NS) {
 
     switch (firstFactionWithUnownedAugs) {
         case Factions.CyberSec: {
+            // Install a backdoor on the CSEC server
             const connected = ["foodnstuff", "CSEC"].every((hostname) => ns.connect(hostname));
             if (!connected) {
                 throw new Error("failed to backdoor CSEC");
@@ -227,6 +233,12 @@ async function induceFactionInvite(ns: NS) {
                 throw new Error("backdoored CSEC but failed to return home");
             }
             logger.toast("backdoored CSEC");
+            break;
+        }
+        case Factions.TianDiHui: {
+            // $1m; Hacking Level 50; Be in Chongqing, New Tokyo, or Ishima
+            ns.travelToCity("Chongqing");
+            logger.toast("traveled to Chonqing to try to join TianDiHui");
             break;
         }
         default: {

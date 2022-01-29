@@ -107,7 +107,11 @@ function getEnoughRep(ns: NS) {
         logger.toast(`stopped working at ${currentWorkFaction} to work at ${augGoal.faction} instead`);
     }
 
-    if (!ns.workForFaction(augGoal.faction, "hacking")) {
+    // Occasionally randomly stop working
+    // to allow the accumulated rep to be added to the totals and refocus
+    if (Math.random() > 0.9) ns.stopAction();
+
+    if (!ns.getPlayer().isWorking && !ns.workForFaction(augGoal.faction, "hacking")) {
         throw new Error(`failed to start work to gain rep for aug=${JSON.stringify(augGoal)}`);
     }
 

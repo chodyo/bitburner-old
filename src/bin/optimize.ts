@@ -6,8 +6,9 @@ export async function main(ns: NS) {
     const logger = new Logger(ns);
     logger.trace("starting");
 
-    const oneTimeScripts = ["/bin/startHack.js"];
+    const oneTimeScripts = [];
     oneTimeScripts.forEach((filename) => {
+        if (alreadyDeployed(ns, filename, "home")) return;
         const result: "success" | "error" = ns.run(filename) ? "success" : "error";
         logger.toast(`running script ${filename} on home: ${result}`, result);
     });

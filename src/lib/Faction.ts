@@ -3,6 +3,12 @@ import { Logger } from "/lib/Logger";
 
 const infinitelyUpgradableAug = "NeuroFlux Governor";
 
+enum Factions {
+    CyberSec = "CyberSec",
+    TianDiHui = "Tian Di Hui",
+    Netburners = "Netburners",
+}
+
 // factions is going to be weird and crazy because it'll have different phases
 // start: no factions
 // next: get invite
@@ -18,15 +24,19 @@ export async function main(ns: NS) {
 
     let currentFactionState: "joinFaction" | "getRep" | "buyAugs" | "buyNeuroFluxGovernor" | "installAugs" =
         "joinFaction";
-    logger.trace("currentFactionState", currentFactionState);
+
+    // eslint-disable-next-line no-constant-condition
     while (true) {
+        logger.trace("currentFactionState", currentFactionState);
+
         if (currentFactionState === "joinFaction") {
-            const joined = joinFactionWithAugsToBuy(ns);
+            const joined = await joinFactionWithAugsToBuy(ns);
             if (joined) {
                 logger.toast("done joining faction with augs i need");
                 currentFactionState = "getRep";
             }
         }
+
         if (currentFactionState === "getRep") {
             const maxxed = getEnoughRep(ns);
             if (maxxed) {
@@ -34,6 +44,7 @@ export async function main(ns: NS) {
                 currentFactionState = "buyAugs";
             }
         }
+
         if (currentFactionState === "buyAugs") {
             const noneLeft = buyAugs(ns);
             if (noneLeft) {
@@ -41,6 +52,7 @@ export async function main(ns: NS) {
                 currentFactionState = "buyNeuroFluxGovernor";
             }
         }
+
         if (currentFactionState === "buyNeuroFluxGovernor") {
             const outOfMoney = buyNeuroFluxGovernor(ns);
             if (outOfMoney) {
@@ -48,16 +60,18 @@ export async function main(ns: NS) {
                 currentFactionState = "installAugs";
             }
         }
+
         if (currentFactionState === "installAugs") {
             logger.toast("installing augs");
             installAugs(ns);
         }
+
         await ns.sleep(60000);
     }
     logger.toast("exiting augments buyer", "info");
 }
 
-function joinFactionWithAugsToBuy(ns: NS) {
+async function joinFactionWithAugsToBuy(ns: NS) {
     const augsAvailableFromJoinedFactions = unownedUninstalledAugmentsFromFactions(ns, ns.getPlayer().factions);
     if (augsAvailableFromJoinedFactions.length > 0) {
         return true;
@@ -68,31 +82,26 @@ function joinFactionWithAugsToBuy(ns: NS) {
         return ns.joinFaction(augsAvailableFromInvitedFactions[0].faction);
     }
 
-    // todo: work on finding joinable faction
+    await induceFactionInvite(ns);
 }
 
 function getEnoughRep(ns: NS) {
     const logger = new Logger(ns);
 
-    let oldWork: string | undefined = undefined;
-    if (ns.getPlayer().isWorking) {
-        oldWork = ns.getPlayer().currentWorkFactionName;
-        ns.stopAction();
-    }
-
     const augs = unownedUninstalledAugmentsFromFactions(ns, ns.getPlayer().factions)
         .filter((aug) => ns.getFactionRep(aug.faction) < aug.repreq)
         .sort((a, b) => b.repreq - a.repreq);
-
-    logger.info("augs", augs);
 
     if (augs.length === 0) {
         return true;
     }
 
     const augGoal = augs[0];
-    if (oldWork && augGoal.faction !== oldWork) {
-        logger.toast(`stopped working at ${oldWork} to work at ${augGoal.faction} instead`);
+
+    const currentWorkFaction = ns.getPlayer().isWorking ? ns.getPlayer().currentWorkFactionName : undefined;
+    if (currentWorkFaction && currentWorkFaction !== augGoal.faction) {
+        ns.stopAction();
+        logger.toast(`stopped working at ${currentWorkFaction} to work at ${augGoal.faction} instead`);
     }
 
     if (!ns.workForFaction(augGoal.faction, "hacking")) {
@@ -195,4 +204,35 @@ function unownedUninstalledAugmentsFromFactions(ns: NS, factions: string[]) {
         )
         .filter((aug) => !playerAugs.includes(aug.name))
         .filter((aug) => aug.name !== infinitelyUpgradableAug);
+}
+
+async function induceFactionInvite(ns: NS) {
+    const logger = new Logger(ns);
+
+    let firstFactionWithUnownedAugs: string | undefined = undefined;
+    for (const faction in Factions) {
+        if (unownedUninstalledAugmentsFromFactions(ns, [faction]).length > 0) {
+            firstFactionWithUnownedAugs = faction;
+            break;
+        }
+    }
+
+    switch (firstFactionWithUnownedAugs) {
+        case Factions.CyberSec: {
+            const connected = ["foodnstuff", "CSEC"].every((hostname) => ns.connect(hostname));
+            if (!connected) {
+                throw new Error("failed to backdoor CSEC");
+            }
+            await ns.installBackdoor();
+            const returnedHome = ["foodnstuff", "home"].every((hostname) => ns.connect(hostname));
+            if (!returnedHome) {
+                throw new Error("backdoored CSEC but failed to return home");
+            }
+            logger.toast("backdoored CSEC");
+            break;
+        }
+        default: {
+            logger.warn(`trying to induce invite to ${firstFactionWithUnownedAugs} but not implemented`);
+        }
+    }
 }

@@ -19,7 +19,7 @@ export function pricesWithOnlyUpwardTrends(prices: number[]) {
 
     prices = prices
         .filter((v, i, p) => {
-            // squish duplicates ahead of time because they really mess with my head
+            // squish adjacent duplicates ahead of time because they really mess with my head
             return i === p.length - 1 || v !== p[i + 1];
         })
         .filter((v, i, p) => {

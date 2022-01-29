@@ -35,7 +35,7 @@ function recursivelyFindHost(ns: NS, hostname: string, searchHost: string, check
     checkedHosts.set(hostname, true);
 
     for (const connectedHost of ns.scan(hostname)) {
-        if (connectedHost.startsWith(searchHost)) {
+        if (connectedHost.toLowerCase().startsWith(searchHost.toLowerCase())) {
             return [hostname, connectedHost];
         }
 

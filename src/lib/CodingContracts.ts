@@ -194,7 +194,7 @@ export async function main(ns: NS) {
             (Object.values(command).filter((cmd) => typeof cmd === "string") as string[]).forEach((cmd) => {
                 logger.warn(cmd);
             });
-            logger.warn(flags);
+            logger.warn("flags", flags);
             return;
     }
 }
@@ -345,7 +345,7 @@ function largestPrimeFactor(n: number) {
 
 function stockTraderI(data: number[]) {
     const trends = pricesWithOnlyUpwardTrends(data);
-    const tradesRemaining = Infinity;
+    const tradesRemaining = 1;
     return calcMaxProfitFromTrades(trends, tradesRemaining);
 }
 

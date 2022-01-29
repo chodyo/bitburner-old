@@ -27,8 +27,6 @@ export async function main(ns: NS) {
 
     // eslint-disable-next-line no-constant-condition
     while (true) {
-        logger.trace("currentFactionState", currentFactionState);
-
         if (currentFactionState === "joinFaction") {
             const joined = await joinFactionWithAugsToBuy(ns);
             if (joined) {

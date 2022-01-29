@@ -47,3 +47,36 @@ export function pricesWithOnlyUpwardTrends(prices: number[]) {
     }
     return upwardTrends;
 }
+
+/**
+ * Could improve this by adding caching since this recalculates
+ * the "leaf" nodes (end of the trade chain) quite a bit
+ */
+export function calcMaxProfitFromTrades(
+    trends: { low: number; high: number }[],
+    tradesRemaining: number,
+    stock = 0
+): number {
+    if (trends.length === 0) {
+        return 0;
+    }
+
+    if (tradesRemaining === 0 && stock === 0) {
+        return 0;
+    }
+
+    const ask = trends[0].low;
+    const bid = trends[0].high;
+    const theFuture = trends.slice(1);
+
+    const hodl = calcMaxProfitFromTrades(theFuture, tradesRemaining, stock);
+
+    if (stock === 0) {
+        const buyNow = -ask + calcMaxProfitFromTrades(theFuture, tradesRemaining, stock + 1);
+        const buyAndSell = bid - ask + calcMaxProfitFromTrades(theFuture, tradesRemaining - 1, stock);
+        return Math.max(hodl, buyNow, buyAndSell);
+    }
+
+    const sellNow = calcMaxProfitFromTrades(theFuture, tradesRemaining - 1, stock - 1);
+    return Math.max(hodl, sellNow);
+}

@@ -13,7 +13,14 @@ export async function main(ns: NS) {
         logger.toast(`running script ${filename} on home: ${result}`, result);
     });
 
-    const backgroundScripts = ["/lib/Home.js", "/lib/Hacknet.js", "/lib/Pserv.js", "/lib/Faction.js"];
+    const backgroundScripts = [
+        "/lib/Home.js",
+        "/lib/Darkweb.js",
+        "/lib/Hacknet.js",
+        "/lib/Pserv.js",
+        "/lib/Faction.js",
+        "/bin/startHack.js",
+    ];
     while (true) {
         backgroundScripts.forEach((filename) => {
             if (alreadyDeployed(ns, filename, "home")) return;

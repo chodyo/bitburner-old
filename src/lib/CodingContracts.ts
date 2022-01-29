@@ -1,6 +1,6 @@
 import { NS } from "Bitburner";
 import { Logger } from "/lib/Logger";
-import { pricesWithOnlyUpwardTrends } from "/lib/Stonks";
+import { calcMaxProfitFromTrades, pricesWithOnlyUpwardTrends } from "/lib/Stonks";
 
 enum command {
     find,
@@ -10,6 +10,7 @@ enum command {
     largestPrimeFactor,
     stockTraderI,
     stockTraderII,
+    stockTraderIII,
 }
 function stringToCommand(o: string | number | boolean): command {
     return command[o.toString() as keyof typeof command];
@@ -18,7 +19,7 @@ function stringToCommand(o: string | number | boolean): command {
 const contractTypes = [
     "Algorithmic Stock Trader I", //        ✔
     "Algorithmic Stock Trader II", //       ✔
-    "Algorithmic Stock Trader III",
+    "Algorithmic Stock Trader III", //      ✔
     "Algorithmic Stock Trader IV",
     "Array Jumping Game",
     "Find All Valid Math Expressions",
@@ -94,16 +95,24 @@ type Filters = {
 export async function main(ns: NS) {
     const logger = new Logger(ns, { stdout: true, enableNSTrace: true });
 
-    switch (stringToCommand(ns.args[0])) {
+    const flags = ns.flags([
+        ["filter", "{}"],
+        ["ip", ""],
+        ["n", -1],
+        ["triangle", "[[]]"],
+        ["stocks", "[]"],
+    ]);
+
+    switch (stringToCommand(flags["_"][0])) {
         case command.find: {
-            findAndFilterContracts(ns).forEach((contract) => {
+            findAndFilterContracts(ns, flags["filter"] as string).forEach((contract) => {
                 logger.info(contract.filename, contract.hostname, contract.type);
             });
             break;
         }
 
         case command.autosolve: {
-            findAndFilterContracts(ns).forEach((contract) => {
+            findAndFilterContracts(ns, flags["filter"] as string).forEach((contract) => {
                 const data = contract.data;
                 let answer: number | string[];
                 switch (contract.type) {
@@ -120,11 +129,15 @@ export async function main(ns: NS) {
                         break;
 
                     case "Algorithmic Stock Trader I":
-                        answer = stockTraderI(pricesWithOnlyUpwardTrends(data));
+                        answer = stockTraderI(data);
                         break;
 
                     case "Algorithmic Stock Trader II":
-                        answer = stockTraderII(pricesWithOnlyUpwardTrends(data));
+                        answer = stockTraderII(data);
+                        break;
+
+                    case "Algorithmic Stock Trader III":
+                        answer = stockTraderIII(data);
                         break;
 
                     default:
@@ -139,34 +152,40 @@ export async function main(ns: NS) {
         }
 
         case command.ip: {
-            const arg = ns.args[1].toString();
-            const validIPAddresses = recurseToConvertStringToIPs(arg);
+            const ip = flags["ip"] as string;
+            const validIPAddresses = recurseToConvertStringToIPs(ip);
             logger.info("=>", ...Array.from(validIPAddresses.keys()));
             break;
         }
 
         case command.triangle: {
-            const arg = JSON.parse(ns.args[1].toString());
-            const minimumPath = recurseToFindMinimumPathSumInATriangle(arg);
+            const triangle = JSON.parse(flags["triangle"] as string);
+            const minimumPath = recurseToFindMinimumPathSumInATriangle(triangle);
             logger.info("=>", minimumPath);
             break;
         }
 
         case command.largestPrimeFactor: {
-            const n = typeof ns.args[1] === "number" ? ns.args[1] : parseInt(ns.args[1].toString());
+            const n = flags["n"] as number;
             logger.info("=>", largestPrimeFactor(n));
             break;
         }
 
         case command.stockTraderI: {
-            const arg = pricesWithOnlyUpwardTrends(JSON.parse(ns.args[1].toString()));
-            logger.info("=>", stockTraderI(arg));
+            const stocks = JSON.parse(flags["stocks"]);
+            logger.info("=>", stockTraderI(stocks));
             break;
         }
 
         case command.stockTraderII: {
-            const arg = pricesWithOnlyUpwardTrends(JSON.parse(ns.args[1].toString()));
-            logger.info("=>", stockTraderII(arg));
+            const stocks = JSON.parse(flags["stocks"]);
+            logger.info("=>", stockTraderII(stocks));
+            break;
+        }
+
+        case command.stockTraderIII: {
+            const stocks = JSON.parse(flags["stocks"]);
+            logger.info("=>", stockTraderIII(stocks));
             break;
         }
 
@@ -175,12 +194,13 @@ export async function main(ns: NS) {
             (Object.values(command).filter((cmd) => typeof cmd === "string") as string[]).forEach((cmd) => {
                 logger.warn(cmd);
             });
+            logger.warn(flags);
             return;
     }
 }
 
-function findAndFilterContracts(ns: NS) {
-    const filters: Filters = ns.args.length > 1 ? JSON.parse(ns.args[1]?.toString()) : {};
+function findAndFilterContracts(ns: NS, filter: string) {
+    const filters: Filters = JSON.parse(filter);
     const checkedHosts = new Map<string, boolean>();
     const contracts: Map<string, Contract> = recursivelyFindContracts(ns, "home", checkedHosts);
 
@@ -198,7 +218,7 @@ function findAndFilterContracts(ns: NS) {
         const regexp = /^contract-[0-9]+-?(.*)\.cct$/;
         contracts.forEach((v, k, m) => {
             const factionExecArray = regexp.exec(v.filename);
-            if (factionExecArray?.at(1)?.toLowerCase() === factionFilter) {
+            if (factionExecArray?.[1].toLowerCase() === factionFilter) {
                 return;
             }
             m.delete(k);
@@ -208,7 +228,7 @@ function findAndFilterContracts(ns: NS) {
     return contracts;
 }
 
-function recursivelyFindContracts(ns: NS, hostname: string, checkedHosts: Map<string, boolean>) {
+function recursivelyFindContracts(ns: NS, hostname: string, checkedHosts = new Map<string, boolean>()) {
     const contracts = new Map<string, Contract>();
 
     if (checkedHosts.get(hostname)) {
@@ -290,7 +310,11 @@ function recurseToConvertStringToIPs(digits: string, octets = 4) {
     return combinations;
 }
 
-function recurseToFindMinimumPathSumInATriangle(triangle: number[][], depth = 0, i = 0) {
+function recurseToFindMinimumPathSumInATriangle(triangle: number[][], depth = 0, i = 0): number {
+    if (triangle.length === 0 || triangle.some((insideArray) => insideArray.length === 0)) {
+        return 0;
+    }
+
     if (triangle.length - 1 === depth) {
         return triangle[depth][i];
     }
@@ -319,43 +343,29 @@ function largestPrimeFactor(n: number) {
     return factors.sort((a, b) => a - b).pop() || 0;
 }
 
-function stockTraderI(trends: { low: number; high: number }[]) {
-    let bestTrade = 0;
-    const highs = trends.map((v, i) => ({ bid: v.high, idx: i })).sort((a, b) => a.bid - b.bid);
-    trends.forEach((trend, i) => {
-        const ask = trend.low;
-        let bestTradeForAsk = 0;
-        highs.forEach((high) => {
-            const bid = high.bid;
-            const j = high.idx;
-            if (bid - ask > bestTradeForAsk && j >= i) bestTradeForAsk = bid - ask;
-        });
-        if (bestTradeForAsk > bestTrade) bestTrade = bestTradeForAsk;
-    });
-    return bestTrade;
+function stockTraderI(data: number[]) {
+    const trends = pricesWithOnlyUpwardTrends(data);
+    const tradesRemaining = Infinity;
+    return calcMaxProfitFromTrades(trends, tradesRemaining);
+}
+
+function stockTraderII(data: number[]): number {
+    const trends = pricesWithOnlyUpwardTrends(data);
+    const tradesRemaining = Infinity;
+    return calcMaxProfitFromTrades(trends, tradesRemaining);
 }
 
 /**
- * Could improve this by adding caching since * this recalculates
- * the "leaf" nodes (end of the trade chain) quite a bit
+ * You are given the following array of stock prices (which are numbers) where the i-th element represents the stock price on day i:
+
+116,34,63,190,143,88,142,15,40,119,10,54
+
+Determine the maximum possible profit you can earn using at most two transactions. A transaction is defined as buying and then selling one share of the stock. Note that you cannot engage in multiple transactions at once. In other words, you must sell the stock before you buy it again.
+
+If no profit can be made, then the answer should be 0
  */
-function stockTraderII(trends: { low: number; high: number }[], stock = 0) {
-    if (trends.length === 0) {
-        return 0;
-    }
-
-    const ask = trends[0].low;
-    const bid = trends[0].high;
-    const theFuture = trends.slice(1);
-
-    if (stock === 0) {
-        const hodl = stockTraderII(theFuture, stock);
-        const buyNow = -ask + stockTraderII(theFuture, stock + 1);
-        const buyAndSell = bid - ask + hodl;
-        return Math.max(buyNow, buyAndSell, hodl);
-    }
-
-    const hodl = stockTraderII(theFuture, stock);
-    const sellNow = stockTraderII(theFuture, stock - 1) + bid;
-    return Math.max(sellNow, hodl);
+function stockTraderIII(data: number[]): number {
+    const trends = pricesWithOnlyUpwardTrends(data);
+    const tradesRemaining = 2;
+    return calcMaxProfitFromTrades(trends, tradesRemaining);
 }

@@ -8,10 +8,13 @@ export const $ = "$0.00a";
 
 export async function main(ns: NS) {
     const logger = new Logger(ns, { stdout: true });
-    const serverMonies = new Map();
-    getEveryAccessibleServerMonies(ns, serverMonies);
-    logger.info("all server monies", serverMonies);
+
+    logger.trace("getting desired savings");
     logger.info("savings", ns.nFormat(desiredSavings(ns), $));
+}
+
+export function desiredSavings(ns: NS, minutesOfSavings = 10) {
+    return incomeBasedSavings(ns) * minutesOfSavings * 60;
 }
 
 /**
@@ -28,18 +31,32 @@ export async function main(ns: NS) {
  *           500 => $112m
  *          1000 => $316m
  */
-export function desiredSavings(ns: NS) {
-    return exponentialBasedOnHackLevel(ns);
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function exponentialBasedOnHackLevel(ns: NS) {
+    const myHackLevel = ns.getPlayer().hacking;
+    return Math.pow(myHackLevel, 1.5) * 10000;
 }
 
-export function getEveryAccessibleServerMonies(ns: NS, serverMonies: Map<string, number>) {
-    recursiveBankCheck(ns, "home", serverMonies);
+function incomeBasedSavings(ns: NS) {
+    const hacknetRate = new Array(ns.hacknet.numNodes())
+        .fill(undefined)
+        .map((_, n) => ns.hacknet.getNodeStats(n)?.production || 0)
+        .reduce((partialSum, nodeProduction) => partialSum + nodeProduction);
+
+    const hackRate = ns.getScriptIncome()[0];
+
+    return hacknetRate + hackRate;
+}
+
+export function getEveryAccessibleServerMonies(ns: NS) {
+    const serverMonies = recursiveBankCheck(ns, "home");
     serverMonies.delete("home"); // :)
+    return serverMonies;
 }
 
-function recursiveBankCheck(ns: NS, hostname: string, serverMonies: Map<string, number>) {
+function recursiveBankCheck(ns: NS, hostname: string, serverMonies = new Map<string, number>()) {
     if (serverMonies.has(hostname)) {
-        return;
+        return serverMonies;
     }
 
     serverMonies.set(hostname, ns.getServerMaxMoney(hostname) || 0);
@@ -47,11 +64,8 @@ function recursiveBankCheck(ns: NS, hostname: string, serverMonies: Map<string, 
     const remoteHosts = ns.scan(hostname);
     for (const i in remoteHosts) {
         const remoteHost = remoteHosts[i];
-        recursiveBankCheck(ns, remoteHost, serverMonies);
+        serverMonies = recursiveBankCheck(ns, remoteHost, serverMonies);
     }
-}
 
-function exponentialBasedOnHackLevel(ns: NS) {
-    const myHackLevel = ns.getPlayer().hacking;
-    return Math.pow(myHackLevel, 1.5) * 10000;
+    return serverMonies;
 }

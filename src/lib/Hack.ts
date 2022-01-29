@@ -21,8 +21,7 @@ export function getTarget(ns: NS) {
     let target = "";
     let maxMoney = 0;
 
-    const serverMonies = new Map();
-    getEveryAccessibleServerMonies(ns, serverMonies);
+    const serverMonies = getEveryAccessibleServerMonies(ns);
     serverMonies.forEach((potentialValue, potentialTarget) => {
         const richer = potentialValue > maxMoney;
         const hackable = isHackable(ns, potentialTarget);

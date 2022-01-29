@@ -41,7 +41,7 @@ function incomeBasedSavings(ns: NS) {
     const hacknetRate = new Array(ns.hacknet.numNodes())
         .fill(undefined)
         .map((_, n) => ns.hacknet.getNodeStats(n)?.production || 0)
-        .reduce((partialSum, nodeProduction) => partialSum + nodeProduction);
+        .reduce((partialSum, nodeProduction) => partialSum + nodeProduction, 0);
 
     const hackRate = ns.getScriptIncome()[0];
 

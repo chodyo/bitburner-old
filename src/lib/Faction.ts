@@ -18,56 +18,87 @@ export async function main(ns: NS) {
 
     let currentFactionState: "joinFaction" | "getRep" | "buyAugs" | "buyNeuroFluxGovernor" | "installAugs" =
         "joinFaction";
+    logger.trace("currentFactionState", currentFactionState);
     while (true) {
-        switch (currentFactionState) {
-            case "joinFaction": {
-                const joined = joinFactionWithAugsToBuy(ns);
-                if (joined) {
-                    logger.toast("joined a faction with augs to buy");
-                    currentFactionState = "getRep";
-                }
-                break;
+        if (currentFactionState === "joinFaction") {
+            const joined = joinFactionWithAugsToBuy(ns);
+            if (joined) {
+                logger.toast("done joining faction with augs i need");
+                currentFactionState = "getRep";
             }
-            case "getRep": {
-                const maxxed = getEnoughRep(ns);
-                if (maxxed) {
-                    logger.toast("have enough rep to buy augs");
-                    currentFactionState = "buyAugs";
-                }
-                break;
+        }
+        if (currentFactionState === "getRep") {
+            const maxxed = getEnoughRep(ns);
+            if (maxxed) {
+                logger.toast("done accumulating rep to buy augs");
+                currentFactionState = "buyAugs";
             }
-            case "buyAugs": {
-                const noneLeft = buyAugs(ns);
-                if (noneLeft) {
-                    logger.toast("done buying augs");
-                    currentFactionState = "buyNeuroFluxGovernor";
-                }
-                break;
+        }
+        if (currentFactionState === "buyAugs") {
+            const noneLeft = buyAugs(ns);
+            if (noneLeft) {
+                logger.toast("done buying augs");
+                currentFactionState = "buyNeuroFluxGovernor";
             }
-            case "buyNeuroFluxGovernor": {
-                const outOfMoney = buyNeuroFluxGovernor(ns);
-                if (outOfMoney) {
-                    logger.toast("done buying neuroflux governor upgrades");
-                    currentFactionState = "installAugs";
-                }
-                break;
+        }
+        if (currentFactionState === "buyNeuroFluxGovernor") {
+            const outOfMoney = buyNeuroFluxGovernor(ns);
+            if (outOfMoney) {
+                logger.toast("done buying neuroflux governor upgrades");
+                currentFactionState = "installAugs";
             }
-            case "installAugs": {
-                logger.toast("installing augs");
-                installAugs(ns);
-                break;
-            }
+        }
+        if (currentFactionState === "installAugs") {
+            logger.toast("installing augs");
+            installAugs(ns);
         }
         await ns.sleep(60000);
     }
     logger.toast("exiting augments buyer", "info");
 }
 
-function joinFactionWithAugsToBuy(_ns: NS) {
-    return false;
+function joinFactionWithAugsToBuy(ns: NS) {
+    const augsAvailableFromJoinedFactions = unownedUninstalledAugmentsFromFactions(ns, ns.getPlayer().factions);
+    if (augsAvailableFromJoinedFactions.length > 0) {
+        return true;
+    }
+
+    const augsAvailableFromInvitedFactions = unownedUninstalledAugmentsFromFactions(ns, ns.checkFactionInvitations());
+    if (augsAvailableFromInvitedFactions.length > 0) {
+        return ns.joinFaction(augsAvailableFromInvitedFactions[0].faction);
+    }
+
+    // todo: work on finding joinable faction
 }
 
-function getEnoughRep(_ns: NS) {
+function getEnoughRep(ns: NS) {
+    const logger = new Logger(ns);
+
+    let oldWork: string | undefined = undefined;
+    if (ns.getPlayer().isWorking) {
+        oldWork = ns.getPlayer().currentWorkFactionName;
+        ns.stopAction();
+    }
+
+    const augs = unownedUninstalledAugmentsFromFactions(ns, ns.getPlayer().factions)
+        .filter((aug) => ns.getFactionRep(aug.faction) < aug.repreq)
+        .sort((a, b) => b.repreq - a.repreq);
+
+    logger.info("augs", augs);
+
+    if (augs.length === 0) {
+        return true;
+    }
+
+    const augGoal = augs[0];
+    if (oldWork && augGoal.faction !== oldWork) {
+        logger.toast(`stopped working at ${oldWork} to work at ${augGoal.faction} instead`);
+    }
+
+    if (!ns.workForFaction(augGoal.faction, "hacking")) {
+        throw new Error(`failed to start work to gain rep for aug=${JSON.stringify(augGoal)}`);
+    }
+
     return false;
 }
 
@@ -81,23 +112,11 @@ function buyAugs(ns: NS) {
     const playerAugs = ns.getOwnedAugmentations(includePurchased);
 
     // figure out what needs buying
-    const augs = ns
-        .getPlayer()
-        .factions.flatMap((faction) => {
-            return ns.getAugmentationsFromFaction(faction).map((aug) => ({
-                faction: faction,
-                name: aug,
-                price: ns.getAugmentationPrice(aug),
-                prereqs: ns.getAugmentationPrereq(aug),
-            }));
-        })
-        .filter((aug) => !playerAugs.includes(aug.name))
-        .filter((aug) => aug.name !== infinitelyUpgradableAug)
-        .sort((a, b) => {
-            if (a.prereqs.includes(b.name)) return 1;
-            if (b.prereqs.includes(a.name)) return -1;
-            return b.price - a.price;
-        });
+    const augs = unownedUninstalledAugmentsFromFactions(ns, ns.getPlayer().factions).sort((a, b) => {
+        if (a.prereqs.includes(b.name)) return 1;
+        if (b.prereqs.includes(a.name)) return -1;
+        return b.price - a.price;
+    });
 
     // already bought everything
     if (augs.length === 0) {
@@ -158,4 +177,22 @@ function buyNeuroFluxGovernor(ns: NS) {
 
 function installAugs(ns: NS) {
     ns.installAugmentations("/bin/optimize.js");
+}
+
+function unownedUninstalledAugmentsFromFactions(ns: NS, factions: string[]) {
+    const purchasedAndInstalled = true;
+    const playerAugs = ns.getOwnedAugmentations(purchasedAndInstalled);
+
+    return factions
+        .flatMap((faction) =>
+            ns.getAugmentationsFromFaction(faction).map((aug) => ({
+                faction: faction,
+                name: aug,
+                repreq: ns.getAugmentationRepReq(aug),
+                prereqs: ns.getAugmentationPrereq(aug),
+                price: ns.getAugmentationPrice(aug),
+            }))
+        )
+        .filter((aug) => !playerAugs.includes(aug.name))
+        .filter((aug) => aug.name !== infinitelyUpgradableAug);
 }

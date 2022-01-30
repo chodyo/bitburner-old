@@ -5,12 +5,14 @@ import { calcMaxProfitFromTrades, pricesWithOnlyUpwardTrends } from "/lib/Stonks
 enum command {
     find,
     autosolve,
+
     ip,
-    triangle,
     largestPrimeFactor,
+    mergeOverlappingIntervals,
     stockTraderI,
     stockTraderII,
     stockTraderIII,
+    triangle,
 }
 function stringToCommand(o: string | number | boolean): command {
     return command[o.toString() as keyof typeof command];
@@ -101,6 +103,7 @@ export async function main(ns: NS) {
         ["n", -1],
         ["triangle", "[[]]"],
         ["stocks", "[]"],
+        ["intervals", "[[]]"],
     ]);
 
     switch (stringToCommand(flags["_"][0])) {
@@ -140,13 +143,17 @@ export async function main(ns: NS) {
                         answer = stockTraderIII(data);
                         break;
 
+                    case "Merge Overlapping Intervals":
+                        answer = mergeOverlappingIntervals(data);
+                        break;
+
                     default:
                         return;
                 }
                 logger.info("attempting to solve", contract.toString(), answer);
                 const result = contract.attempt(answer);
                 if (result) logger.info("result", result);
-                else logger.error("failed to solve, only have this many tries left", contract.numTriesRemaining);
+                else logger.alert(`failed to solve ${contract}`);
             });
             break;
         }
@@ -186,6 +193,12 @@ export async function main(ns: NS) {
         case command.stockTraderIII: {
             const stocks = JSON.parse(flags["stocks"]);
             logger.info("=>", stockTraderIII(stocks));
+            break;
+        }
+
+        case command.mergeOverlappingIntervals: {
+            const stocks = JSON.parse(flags["interval"]);
+            logger.info("=>", mergeOverlappingIntervals(stocks));
             break;
         }
 
@@ -355,17 +368,44 @@ function stockTraderII(data: number[]): number {
     return calcMaxProfitFromTrades(trends, tradesRemaining);
 }
 
-/**
- * You are given the following array of stock prices (which are numbers) where the i-th element represents the stock price on day i:
-
-116,34,63,190,143,88,142,15,40,119,10,54
-
-Determine the maximum possible profit you can earn using at most two transactions. A transaction is defined as buying and then selling one share of the stock. Note that you cannot engage in multiple transactions at once. In other words, you must sell the stock before you buy it again.
-
-If no profit can be made, then the answer should be 0
- */
 function stockTraderIII(data: number[]): number {
     const trends = pricesWithOnlyUpwardTrends(data);
     const tradesRemaining = 2;
     return calcMaxProfitFromTrades(trends, tradesRemaining);
+}
+
+function mergeOverlappingIntervals(intervals: number[][]) {
+    if (intervals.length === 0 || intervals.some((interval) => interval.length === 0)) {
+        return ["[]"];
+    }
+
+    const values = new Set<number>();
+    intervals.forEach((interval) => {
+        for (let i = interval[0]; i <= interval[1]; i++) {
+            values.add(i);
+        }
+    });
+
+    const merged = Array.from(values)
+        .sort((a, b) => a - b)
+        .map((n, i, arr) => {
+            const isMin = i === 0;
+            const isMax = i === arr.length - 1;
+            if (isMin || isMax) return { n: n, included: true };
+
+            const nextToOneLess = arr[i - 1] === n - 1;
+            const nextToOneMore = arr[i + 1] === n + 1;
+            if (nextToOneLess && nextToOneMore) return { n: n, included: false };
+
+            return { n: n, included: true };
+        })
+        .filter((x) => x.included)
+        .map((x, i, arr) => {
+            if (i % 2 === 0) {
+                return [x.n, arr[i + 1]?.n];
+            }
+        })
+        .filter((x) => !!x);
+
+    return [JSON.stringify(merged)];
 }

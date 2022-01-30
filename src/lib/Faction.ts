@@ -225,8 +225,8 @@ async function induceFactionInvite(ns: NS) {
     }
 
     switch (firstFactionWithUnownedAugs) {
+        // Install a backdoor on the CSEC server
         case Factions.CyberSec: {
-            // Install a backdoor on the CSEC server
             const connected = ["foodnstuff", "CSEC"].every((hostname) => ns.connect(hostname));
             if (!connected) {
                 throw new Error("failed to backdoor CSEC");
@@ -239,12 +239,44 @@ async function induceFactionInvite(ns: NS) {
             logger.toast("backdoored CSEC");
             break;
         }
-        case Factions.TianDiHui: {
-            // $1m; Hacking Level 50; Be in Chongqing, New Tokyo, or Ishima
-            ns.travelToCity("Chongqing");
-            logger.toast("traveled to Chonqing to try to join TianDiHui");
+
+        // $1m; Hacking Level 50; Be in Chongqing, New Tokyo, or Ishima
+        // Be in Chongqing; $20m
+        case Factions.TianDiHui:
+        case Factions.Chongqing:
+            if (ns.travelToCity("Chongqing")) {
+                logger.toast(`traveled to Chongqing to try to join ${firstFactionWithUnownedAugs}`);
+            }
             break;
-        }
+
+        // Be in New Tokyo; $20m
+        case Factions.NewTokyo:
+            if (ns.travelToCity("New Tokyo")) {
+                logger.toast("traveled to New Tokyo to try to join New Tokyo");
+            }
+            break;
+
+        // Be in Ishima; $30m
+        case Factions.Ishima:
+            if (ns.travelToCity("Ishima")) {
+                logger.toast("traveled to Ishima to try to join Ishima");
+            }
+            break;
+
+        // Be in Aevum; $40m
+        case Factions.Aevum:
+            if (ns.travelToCity("Aevum")) {
+                logger.toast("traveled to Aevum to try to join Aevum");
+            }
+            break;
+
+        // Be in Aevum; $50m
+        case Factions.Volhaven:
+            if (ns.travelToCity("Volhaven")) {
+                logger.toast("traveled to Volhaven to try to join Volhaven");
+            }
+            break;
+
         default: {
             logger.warn(`trying to induce invite to ${firstFactionWithUnownedAugs} but not implemented`);
         }

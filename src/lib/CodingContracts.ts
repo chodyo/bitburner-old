@@ -119,15 +119,15 @@ export async function main(ns: NS) {
                 let answer: number | string[];
                 switch (contract.type) {
                     case "Generate IP Addresses":
-                        answer = Array.from(recurseToConvertStringToIPs(data).keys());
-                        break;
-
-                    case "Minimum Path Sum in a Triangle":
-                        answer = recurseToFindMinimumPathSumInATriangle(data);
+                        answer = Array.from(ip(data).keys());
                         break;
 
                     case "Find Largest Prime Factor":
                         answer = largestPrimeFactor(data);
+                        break;
+
+                    case "Merge Overlapping Intervals":
+                        answer = [JSON.stringify(mergeOverlappingIntervals(data))];
                         break;
 
                     case "Algorithmic Stock Trader I":
@@ -146,8 +146,8 @@ export async function main(ns: NS) {
                         answer = stockTraderIV(data);
                         break;
 
-                    case "Merge Overlapping Intervals":
-                        answer = [JSON.stringify(mergeOverlappingIntervals(data))];
+                    case "Minimum Path Sum in a Triangle":
+                        answer = triangle(data);
                         break;
 
                     default:
@@ -162,15 +162,15 @@ export async function main(ns: NS) {
         }
 
         case command.ip: {
-            const ip = flags["ip"] as string;
-            const validIPAddresses = recurseToConvertStringToIPs(ip);
+            const ipStr = flags["ip"] as string;
+            const validIPAddresses = ip(ipStr);
             logger.info("=>", ...Array.from(validIPAddresses.keys()));
             break;
         }
 
         case command.triangle: {
-            const triangle = JSON.parse(flags["triangle"] as string);
-            const minimumPath = recurseToFindMinimumPathSumInATriangle(triangle);
+            const triangleArr = JSON.parse(flags["triangle"] as string);
+            const minimumPath = triangle(triangleArr);
             logger.info("=>", minimumPath);
             break;
         }
@@ -266,7 +266,7 @@ function recursivelyFindContracts(ns: NS, hostname: string, checkedHosts = new M
  * @param digits The string that should be converted to an IP
  * @param octets The number of octets that digits contains; decrement this number when calling recursively
  */
-function recurseToConvertStringToIPs(digits: string, octets = 4) {
+function ip(digits: string, octets = 4) {
     const combinations = new Map<string, boolean>();
 
     // shortcuts :)
@@ -310,26 +310,12 @@ function recurseToConvertStringToIPs(digits: string, octets = 4) {
         }
 
         // non-base
-        const parsedRemainder = recurseToConvertStringToIPs(remainder, octets - 1);
+        const parsedRemainder = ip(remainder, octets - 1);
         parsedRemainder.forEach((_bool, remainderCombination) => {
             combinations.set(`${octet}.${remainderCombination}`, true);
         });
     }
     return combinations;
-}
-
-function recurseToFindMinimumPathSumInATriangle(triangle: number[][], depth = 0, i = 0): number {
-    if (triangle.length === 0 || triangle.some((insideArray) => insideArray.length === 0)) {
-        return 0;
-    }
-
-    if (triangle.length - 1 === depth) {
-        return triangle[depth][i];
-    }
-
-    const leftSum = recurseToFindMinimumPathSumInATriangle(triangle, depth + 1, i);
-    const rightSum = recurseToFindMinimumPathSumInATriangle(triangle, depth + 1, i + 1);
-    return triangle[depth][i] + Math.min(leftSum, rightSum);
 }
 
 function largestPrimeFactor(n: number) {
@@ -349,6 +335,31 @@ function largestPrimeFactor(n: number) {
         }
     }
     return factors.sort((a, b) => a - b).pop() || 0;
+}
+
+function mergeOverlappingIntervals(intervals: number[][]) {
+    if (intervals.length < 2 || intervals.some((interval) => interval.length !== 2)) {
+        return intervals;
+    }
+
+    intervals.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+
+    if (intervals.length === 2) {
+        const firstHigh = intervals[0][1];
+        const secondLow = intervals[1][0];
+        if (firstHigh >= secondLow) return [[intervals[0][0], intervals[1][1]]];
+        return intervals;
+    }
+
+    const merged: number[][] = [];
+
+    for (let i = 1; i < intervals.length; i++) {
+        const first = merged.pop() || intervals[0];
+        const second = intervals[i];
+        merged.push(...mergeOverlappingIntervals([first, second]));
+    }
+
+    return merged;
 }
 
 function stockTraderI(data: number[]) {
@@ -376,27 +387,16 @@ function stockTraderIV(data: unknown[]) {
     return calcMaxProfitFromTrades(trends, tradesRemaining);
 }
 
-function mergeOverlappingIntervals(intervals: number[][]) {
-    if (intervals.length < 2 || intervals.some((interval) => interval.length !== 2)) {
-        return intervals;
+function triangle(triangleArr: number[][], depth = 0, i = 0): number {
+    if (triangleArr.length === 0 || triangleArr.some((insideArray) => insideArray.length === 0)) {
+        return 0;
     }
 
-    intervals.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
-
-    if (intervals.length === 2) {
-        const firstHigh = intervals[0][1];
-        const secondLow = intervals[1][0];
-        if (firstHigh >= secondLow) return [[intervals[0][0], intervals[1][1]]];
-        return intervals;
+    if (triangleArr.length - 1 === depth) {
+        return triangleArr[depth][i];
     }
 
-    const merged: number[][] = [];
-
-    for (let i = 1; i < intervals.length; i++) {
-        const first = merged.pop() || intervals[0];
-        const second = intervals[i];
-        merged.push(...mergeOverlappingIntervals([first, second]));
-    }
-
-    return merged;
+    const leftSum = triangle(triangleArr, depth + 1, i);
+    const rightSum = triangle(triangleArr, depth + 1, i + 1);
+    return triangleArr[depth][i] + Math.min(leftSum, rightSum);
 }

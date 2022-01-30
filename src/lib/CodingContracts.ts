@@ -3,43 +3,44 @@ import { Logger } from "/lib/Logger";
 import { calcMaxProfitFromTrades, pricesWithOnlyUpwardTrends } from "/lib/Stonks";
 
 enum command {
-    find,
-    autosolve,
+    find = "find",
+    autosolve = "autosolve",
 
-    ip,
-    largestPrimeFactor,
-    mergeOverlappingIntervals,
-    stockTraderI,
-    stockTraderII,
-    stockTraderIII,
-    stockTraderIV,
-    triangle,
-}
-function stringToCommand(o: string | number | boolean): command {
-    return command[o.toString() as keyof typeof command];
+    expr = "expr",
+    exprParen = "exprParen",
+    ip = "ip",
+    jump = "jump",
+    largestPrimeFactor = "largestPrimeFactor",
+    mergeOverlappingIntervals = "mergeOverlappingIntervals",
+    spiralize = "spiralize",
+    stockTraderI = "stockTraderI",
+    stockTraderII = "stockTraderII",
+    stockTraderIII = "stockTraderIII",
+    stockTraderIV = "stockTraderIV",
+    subArrayWithMaxSum = "subArrayWithMaxSum",
+    triangle = "triangle",
+    uniqueGridPathsI = "uniqueGridPathsI",
+    uniqueGridPathsII = "uniqueGridPathsII",
+    waysToSum = "waysToSum",
 }
 
-const contractTypes = [
-    "Algorithmic Stock Trader I", //        ✔
-    "Algorithmic Stock Trader II", //       ✔
-    "Algorithmic Stock Trader III", //      ✔
-    "Algorithmic Stock Trader IV",
-    "Array Jumping Game",
-    "Find All Valid Math Expressions",
-    "Find Largest Prime Factor", //         ✔
-    "Generate IP Addresses", //             ✔
-    "Merge Overlapping Intervals",
-    "Minimum Path Sum in a Triangle", //    ✔
-    "Sanitize Parentheses in Expression",
-    "Spiralize Matrix",
-    "Subarray with Maximum Sum",
-    "Total Ways to Sum",
-    "Unique Paths in a Grid I",
-    "Unique Paths in a Grid II",
-] as const;
-type ContractType = typeof contractTypes[number];
-function isContractType(maybeContractType: unknown): boolean {
-    return !!contractTypes.find((validContractType) => validContractType === maybeContractType);
+enum ContractType {
+    expr = "Find All Valid Math Expressions",
+    exprParen = "Sanitize Parentheses in Expression",
+    ip = "Generate IP Addresses", //                              ✔
+    jump = "Array Jumping Game",
+    largestPrimeFactor = "Find Largest Prime Factor", //          ✔
+    mergeOverlappingIntervals = "Merge Overlapping Intervals", // ✔
+    spiralize = "Spiralize Matrix",
+    stockTraderI = "Algorithmic Stock Trader I", //               ✔
+    stockTraderII = "Algorithmic Stock Trader II", //             ✔
+    stockTraderIII = "Algorithmic Stock Trader III", //           ✔
+    stockTraderIV = "Algorithmic Stock Trader IV", //             ✔
+    subArrayWithMaxSum = "Subarray with Maximum Sum",
+    triangle = "Minimum Path Sum in a Triangle", //               ✔
+    uniqueGridPathsI = "Unique Paths in a Grid I",
+    uniqueGridPathsII = "Unique Paths in a Grid II",
+    waysToSum = "Total Ways to Sum",
 }
 
 class Contract {
@@ -49,11 +50,8 @@ class Contract {
     hostname: string;
 
     get type(): ContractType {
-        const contractTypeStr: unknown = this.ns.codingcontract.getContractType(this.filename, this.hostname);
-        if (isContractType(contractTypeStr)) {
-            return <ContractType>contractTypeStr;
-        }
-        throw new Error(`invalid contract type=${contractTypeStr}`);
+        return this.ns.codingcontract.getContractType(this.filename, this.hostname) as ContractType;
+        // return Object.keys(ContractType)[Object.values(ContractType).indexOf(desc)];
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -107,7 +105,7 @@ export async function main(ns: NS) {
         ["intervals", "[[]]"],
     ]);
 
-    switch (stringToCommand(flags["_"][0])) {
+    switch (flags["_"][0]) {
         case command.find: {
             findAndFilterContracts(ns, flags["filter"] as string).forEach((contract) => {
                 logger.info(contract.filename, contract.hostname, contract.type);
@@ -226,53 +224,38 @@ export async function main(ns: NS) {
 
 function findAndFilterContracts(ns: NS, filter: string) {
     const filters: Filters = JSON.parse(filter);
-    const checkedHosts = new Map<string, boolean>();
-    const contracts: Map<string, Contract> = recursivelyFindContracts(ns, "home", checkedHosts);
+    const contracts = recursivelyFindContracts(ns, "home");
 
-    if (filters?.type && filters.type !== undefined) {
-        contracts.forEach((v, k, m) => {
-            if (v.type !== filters.type) {
-                m.delete(k);
-            }
+    // e.g. "stockTraderIV"
+    const typeFilterAsKey = filters.type ? ContractType[filters.type]?.toLowerCase() : undefined;
+    // e.g. "Algorithmic Stock Trader IV"
+    const typeFilterAsValue = filters.type ? filters.type.toLowerCase() : undefined;
+
+    // e.g. "ecorp"
+    const factionFilter = filters.faction ? filters.faction : undefined;
+    const factionRegexp = new RegExp(`^contract-[0-9]+-?${factionFilter}\\.cct$`, "i");
+
+    return contracts
+        .filter((contract) => {
+            if (!typeFilterAsKey && !typeFilterAsValue) return true;
+            return [typeFilterAsKey, typeFilterAsValue].includes(contract.type.toLowerCase());
+        })
+        .filter((contract) => {
+            if (!factionFilter) return true;
+            return contract.filename.match(factionRegexp);
         });
-    }
-
-    // empty string indicates contract not associated with any faction
-    const factionFilter = filters?.faction?.toLowerCase();
-    if (factionFilter || factionFilter === "") {
-        const regexp = /^contract-[0-9]+-?(.*)\.cct$/;
-        contracts.forEach((v, k, m) => {
-            const factionExecArray = regexp.exec(v.filename);
-            if (factionExecArray?.[1].toLowerCase() === factionFilter) {
-                return;
-            }
-            m.delete(k);
-        });
-    }
-
-    return contracts;
 }
 
 function recursivelyFindContracts(ns: NS, hostname: string, checkedHosts = new Map<string, boolean>()) {
-    const contracts = new Map<string, Contract>();
-
     if (checkedHosts.get(hostname)) {
-        return contracts;
+        return [];
     }
     checkedHosts.set(hostname, true);
 
-    ns.ls(hostname, ".cct").forEach((filename) => {
-        // const contractTypeStr: unknown = ns.codingcontract.getContractType(filename, hostname);
-        // if (!isContractType(contractTypeStr)) {
-        //     logger.warn("found unexpected contract type", contractTypeStr);
-        // }
-        contracts.set(`${filename}_${hostname}`, new Contract(ns, filename, hostname));
-    });
+    const contracts = ns.ls(hostname, ".cct").map((filename) => new Contract(ns, filename, hostname));
 
     ns.scan(hostname).forEach((connectedHost) => {
-        recursivelyFindContracts(ns, connectedHost, checkedHosts).forEach((contract, key) => {
-            contracts.set(key, contract);
-        });
+        contracts.push(...recursivelyFindContracts(ns, connectedHost, checkedHosts));
     });
 
     return contracts;

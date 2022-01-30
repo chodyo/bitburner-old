@@ -3,8 +3,9 @@ import { Logger } from "/lib/Logger";
 import { calcMaxProfitFromTrades, pricesWithOnlyUpwardTrends } from "/lib/Stonks";
 
 enum command {
-    find = "find",
     autosolve = "autosolve",
+    find = "find",
+    list = "list",
 
     expr = "expr",
     exprParen = "exprParen",
@@ -51,7 +52,6 @@ class Contract {
 
     get type(): ContractType {
         return this.ns.codingcontract.getContractType(this.filename, this.hostname) as ContractType;
-        // return Object.keys(ContractType)[Object.values(ContractType).indexOf(desc)];
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -98,55 +98,60 @@ export async function main(ns: NS) {
 
     const flags = ns.flags([
         ["filter", "{}"],
-        ["ip", ""],
-        ["n", -1],
-        ["triangle", "[[]]"],
-        ["stocks", "[]"],
         ["intervals", "[[]]"],
+        ["ip", ""],
+        ["matrix", "[[]]"],
+        ["n", -1],
+        ["stocks", "[]"],
+        ["triangle", "[[]]"],
     ]);
 
     switch (flags["_"][0]) {
-        case command.find: {
+        case command.find:
+        case command.list:
             findAndFilterContracts(ns, flags["filter"] as string).forEach((contract) => {
                 logger.info(contract.filename, contract.hostname, contract.type);
             });
             break;
-        }
 
         case command.autosolve: {
             findAndFilterContracts(ns, flags["filter"] as string).forEach((contract) => {
                 const data = contract.data;
                 let answer: number | string[];
                 switch (contract.type) {
-                    case "Generate IP Addresses":
+                    case ContractType.ip:
                         answer = Array.from(ip(data).keys());
                         break;
 
-                    case "Find Largest Prime Factor":
+                    case ContractType.largestPrimeFactor:
                         answer = largestPrimeFactor(data);
                         break;
 
-                    case "Merge Overlapping Intervals":
+                    case ContractType.mergeOverlappingIntervals:
                         answer = [JSON.stringify(mergeOverlappingIntervals(data))];
                         break;
 
-                    case "Algorithmic Stock Trader I":
+                    case ContractType.spiralize:
+                        answer = [JSON.stringify(spiralize(data))];
+                        break;
+
+                    case ContractType.stockTraderI:
                         answer = stockTraderI(data);
                         break;
 
-                    case "Algorithmic Stock Trader II":
+                    case ContractType.stockTraderII:
                         answer = stockTraderII(data);
                         break;
 
-                    case "Algorithmic Stock Trader III":
+                    case ContractType.stockTraderIII:
                         answer = stockTraderIII(data);
                         break;
 
-                    case "Algorithmic Stock Trader IV":
+                    case ContractType.stockTraderIV:
                         answer = stockTraderIV(data);
                         break;
 
-                    case "Minimum Path Sum in a Triangle":
+                    case ContractType.triangle:
                         answer = triangle(data);
                         break;
 
@@ -181,6 +186,18 @@ export async function main(ns: NS) {
             break;
         }
 
+        case command.mergeOverlappingIntervals: {
+            const stocks = JSON.parse(flags["intervals"]);
+            logger.info("=>", mergeOverlappingIntervals(stocks));
+            break;
+        }
+
+        case command.spiralize: {
+            const matrix = JSON.parse(flags["matrix"]) as number[][];
+            logger.info("=>", spiralize(matrix));
+            break;
+        }
+
         case command.stockTraderI: {
             const stocks = JSON.parse(flags["stocks"]);
             logger.info("=>", stockTraderI(stocks));
@@ -203,12 +220,6 @@ export async function main(ns: NS) {
             const stocks = JSON.parse(flags["stocks"]);
             logger.warn("stocks", stocks);
             logger.info("=>", stockTraderIV(stocks));
-            break;
-        }
-
-        case command.mergeOverlappingIntervals: {
-            const stocks = JSON.parse(flags["intervals"]);
-            logger.info("=>", mergeOverlappingIntervals(stocks));
             break;
         }
 
@@ -360,6 +371,26 @@ function mergeOverlappingIntervals(intervals: number[][]) {
     }
 
     return merged;
+}
+
+function spiralize(matrix: number[][]): number[] {
+    if (matrix.length === 0) {
+        return [];
+    }
+
+    matrix = matrix.filter((row) => row.length > 0);
+
+    const top = matrix.shift() || [];
+    const rightEdge = matrix.map((row) => row.pop()).filter(Number.isInteger) as number[];
+    const bottom = matrix.pop()?.reverse() || [];
+    const leftEdge = matrix
+        .map((row) => row.shift())
+        .filter(Number.isInteger)
+        .reverse() as number[];
+
+    const interior = spiralize(matrix);
+
+    return [...top, ...rightEdge, ...bottom, ...leftEdge, ...interior];
 }
 
 function stockTraderI(data: number[]) {

@@ -12,6 +12,7 @@ enum command {
     stockTraderI,
     stockTraderII,
     stockTraderIII,
+    stockTraderIV,
     triangle,
 }
 function stringToCommand(o: string | number | boolean): command {
@@ -143,6 +144,10 @@ export async function main(ns: NS) {
                         answer = stockTraderIII(data);
                         break;
 
+                    case "Algorithmic Stock Trader IV":
+                        answer = stockTraderIV(data);
+                        break;
+
                     case "Merge Overlapping Intervals":
                         answer = mergeOverlappingIntervals(data);
                         break;
@@ -193,6 +198,13 @@ export async function main(ns: NS) {
         case command.stockTraderIII: {
             const stocks = JSON.parse(flags["stocks"]);
             logger.info("=>", stockTraderIII(stocks));
+            break;
+        }
+
+        case command.stockTraderIV: {
+            const stocks = JSON.parse(flags["stocks"]);
+            logger.warn("stocks", stocks);
+            logger.info("=>", stockTraderIV(stocks));
             break;
         }
 
@@ -371,6 +383,13 @@ function stockTraderII(data: number[]): number {
 function stockTraderIII(data: number[]): number {
     const trends = pricesWithOnlyUpwardTrends(data);
     const tradesRemaining = 2;
+    return calcMaxProfitFromTrades(trends, tradesRemaining);
+}
+
+function stockTraderIV(data: unknown[]): number {
+    const tradesRemaining = data[0] as number;
+    const prices = data[1] as number[];
+    const trends = pricesWithOnlyUpwardTrends(prices);
     return calcMaxProfitFromTrades(trends, tradesRemaining);
 }
 

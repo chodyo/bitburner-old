@@ -357,19 +357,19 @@ function stockTraderI(data: number[]) {
     return calcMaxProfitFromTrades(trends, tradesRemaining);
 }
 
-function stockTraderII(data: number[]): number {
+function stockTraderII(data: number[]) {
     const trends = pricesWithOnlyUpwardTrends(data);
     const tradesRemaining = Infinity;
     return calcMaxProfitFromTrades(trends, tradesRemaining);
 }
 
-function stockTraderIII(data: number[]): number {
+function stockTraderIII(data: number[]) {
     const trends = pricesWithOnlyUpwardTrends(data);
     const tradesRemaining = 2;
     return calcMaxProfitFromTrades(trends, tradesRemaining);
 }
 
-function stockTraderIV(data: unknown[]): number {
+function stockTraderIV(data: unknown[]) {
     const tradesRemaining = data[0] as number;
     const prices = data[1] as number[];
     const trends = pricesWithOnlyUpwardTrends(prices);

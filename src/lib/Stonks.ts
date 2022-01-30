@@ -77,6 +77,6 @@ export function calcMaxProfitFromTrades(
         return Math.max(hodl, buyNow, buyAndSell);
     }
 
-    const sellNow = calcMaxProfitFromTrades(theFuture, tradesRemaining - 1, stock - 1);
+    const sellNow = bid + calcMaxProfitFromTrades(theFuture, tradesRemaining - 1, stock - 1);
     return Math.max(hodl, sellNow);
 }

@@ -147,7 +147,7 @@ export async function main(ns: NS) {
                         break;
 
                     case "Merge Overlapping Intervals":
-                        answer = mergeOverlappingIntervals(data);
+                        answer = [JSON.stringify(mergeOverlappingIntervals(data))];
                         break;
 
                     default:
@@ -207,7 +207,7 @@ export async function main(ns: NS) {
         }
 
         case command.mergeOverlappingIntervals: {
-            const stocks = JSON.parse(flags["interval"]);
+            const stocks = JSON.parse(flags["intervals"]);
             logger.info("=>", mergeOverlappingIntervals(stocks));
             break;
         }
@@ -377,37 +377,26 @@ function stockTraderIV(data: unknown[]) {
 }
 
 function mergeOverlappingIntervals(intervals: number[][]) {
-    if (intervals.length === 0 || intervals.some((interval) => interval.length === 0)) {
-        return ["[]"];
+    if (intervals.length < 2 || intervals.some((interval) => interval.length !== 2)) {
+        return intervals;
     }
 
-    const values = new Set<number>();
-    intervals.forEach((interval) => {
-        for (let i = interval[0]; i <= interval[1]; i++) {
-            values.add(i);
-        }
-    });
+    intervals.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
 
-    const merged = Array.from(values)
-        .sort((a, b) => a - b)
-        .map((n, i, arr) => {
-            const isMin = i === 0;
-            const isMax = i === arr.length - 1;
-            if (isMin || isMax) return { n: n, included: true };
+    if (intervals.length === 2) {
+        const firstHigh = intervals[0][1];
+        const secondLow = intervals[1][0];
+        if (firstHigh >= secondLow) return [[intervals[0][0], intervals[1][1]]];
+        return intervals;
+    }
 
-            const nextToOneLess = arr[i - 1] === n - 1;
-            const nextToOneMore = arr[i + 1] === n + 1;
-            if (nextToOneLess && nextToOneMore) return { n: n, included: false };
+    const merged: number[][] = [];
 
-            return { n: n, included: true };
-        })
-        .filter((x) => x.included)
-        .map((x, i, arr) => {
-            if (i % 2 === 0) {
-                return [x.n, arr[i + 1]?.n];
-            }
-        })
-        .filter((x) => !!x);
+    for (let i = 1; i < intervals.length; i++) {
+        const first = merged.pop() || intervals[0];
+        const second = intervals[i];
+        merged.push(...mergeOverlappingIntervals([first, second]));
+    }
 
-    return [JSON.stringify(merged)];
+    return merged;
 }

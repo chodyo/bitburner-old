@@ -6,7 +6,7 @@ export async function main(ns: NS) {
     const logger = new Logger(ns);
     logger.trace("starting");
 
-    const oneTimeScripts = [];
+    const oneTimeScripts = ["/lib/Darkweb.js"];
     oneTimeScripts.forEach((filename) => {
         if (alreadyDeployed(ns, filename, "home")) return;
         const result: "success" | "error" = ns.run(filename) ? "success" : "error";
@@ -15,7 +15,6 @@ export async function main(ns: NS) {
 
     const backgroundScripts = [
         "/lib/Home.js",
-        "/lib/Darkweb.js",
         "/lib/Hacknet.js",
         "/lib/Pserv.js",
         "/lib/Faction.js",

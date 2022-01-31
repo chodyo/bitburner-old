@@ -32,7 +32,7 @@ enum ContractType {
     jump = "Array Jumping Game",
     largestPrimeFactor = "Find Largest Prime Factor", //          ✔
     mergeOverlappingIntervals = "Merge Overlapping Intervals", // ✔
-    spiralize = "Spiralize Matrix",
+    spiralize = "Spiralize Matrix", //                            ✔
     stockTraderI = "Algorithmic Stock Trader I", //               ✔
     stockTraderII = "Algorithmic Stock Trader II", //             ✔
     stockTraderIII = "Algorithmic Stock Trader III", //           ✔
@@ -116,43 +116,46 @@ export async function main(ns: NS) {
 
         case command.autosolve: {
             findAndFilterContracts(ns, flags["filter"] as string).forEach((contract) => {
-                const data = contract.data;
                 let answer: number | string[];
                 switch (contract.type) {
                     case ContractType.ip:
-                        answer = Array.from(ip(data).keys());
+                        answer = Array.from(ip(contract.data).keys());
                         break;
 
                     case ContractType.largestPrimeFactor:
-                        answer = largestPrimeFactor(data);
+                        answer = largestPrimeFactor(contract.data);
                         break;
 
                     case ContractType.mergeOverlappingIntervals:
-                        answer = [JSON.stringify(mergeOverlappingIntervals(data))];
+                        answer = [JSON.stringify(mergeOverlappingIntervals(contract.data))];
                         break;
 
                     case ContractType.spiralize:
-                        answer = [JSON.stringify(spiralize(data))];
+                        answer = [JSON.stringify(spiralize(contract.data))];
                         break;
 
                     case ContractType.stockTraderI:
-                        answer = stockTraderI(data);
+                        answer = stockTraderI(contract.data);
                         break;
 
                     case ContractType.stockTraderII:
-                        answer = stockTraderII(data);
+                        answer = stockTraderII(contract.data);
                         break;
 
                     case ContractType.stockTraderIII:
-                        answer = stockTraderIII(data);
+                        answer = stockTraderIII(contract.data);
                         break;
 
                     case ContractType.stockTraderIV:
-                        answer = stockTraderIV(data);
+                        answer = stockTraderIV(contract.data);
                         break;
 
                     case ContractType.triangle:
-                        answer = triangle(data);
+                        answer = triangle(contract.data);
+                        break;
+
+                    case ContractType.waysToSum:
+                        answer = waysToSum(contract.data);
                         break;
 
                     default:
@@ -174,7 +177,7 @@ export async function main(ns: NS) {
         }
 
         case command.triangle: {
-            const triangleArr = JSON.parse(flags["triangle"] as string);
+            const triangleArr = JSON.parse(flags["triangle"]) as number[][];
             const minimumPath = triangle(triangleArr);
             logger.info("=>", minimumPath);
             break;
@@ -187,7 +190,7 @@ export async function main(ns: NS) {
         }
 
         case command.mergeOverlappingIntervals: {
-            const stocks = JSON.parse(flags["intervals"]);
+            const stocks = JSON.parse(flags["intervals"]) as number[][];
             logger.info("=>", mergeOverlappingIntervals(stocks));
             break;
         }
@@ -199,27 +202,32 @@ export async function main(ns: NS) {
         }
 
         case command.stockTraderI: {
-            const stocks = JSON.parse(flags["stocks"]);
+            const stocks = JSON.parse(flags["stocks"]) as number[];
             logger.info("=>", stockTraderI(stocks));
             break;
         }
 
         case command.stockTraderII: {
-            const stocks = JSON.parse(flags["stocks"]);
+            const stocks = JSON.parse(flags["stocks"]) as number[];
             logger.info("=>", stockTraderII(stocks));
             break;
         }
 
         case command.stockTraderIII: {
-            const stocks = JSON.parse(flags["stocks"]);
+            const stocks = JSON.parse(flags["stocks"]) as number[];
             logger.info("=>", stockTraderIII(stocks));
             break;
         }
 
         case command.stockTraderIV: {
-            const stocks = JSON.parse(flags["stocks"]);
-            logger.warn("stocks", stocks);
+            const stocks = JSON.parse(flags["stocks"]) as number[];
             logger.info("=>", stockTraderIV(stocks));
+            break;
+        }
+
+        case command.waysToSum: {
+            const target = flags["n"] as number;
+            logger.info("=>", waysToSum(target));
             break;
         }
 
@@ -430,4 +438,33 @@ function triangle(triangleArr: number[][], depth = 0, i = 0): number {
     const leftSum = triangle(triangleArr, depth + 1, i);
     const rightSum = triangle(triangleArr, depth + 1, i + 1);
     return triangleArr[depth][i] + Math.min(leftSum, rightSum);
+}
+
+function waysToSum(target: number): number {
+    if (target < 1) return 0;
+
+    // [1, 2, ..., target-1]
+    // these are like the coin denominations i can use to reach a specified cash target
+    const operands = Array(target - 1)
+        .fill(undefined)
+        .map((_, i) => i + 1);
+    // if we wanted coins, we could use this instead
+    // const operands = [1, 5, 10, 25];
+
+    // fill [0, 1, 2, ..., target-1, target] with 0's
+    const results: number[] = Array(target + 1).fill(0);
+    // target=1 has 1 way to sum. store result in [target] spot of array
+    results[0] = 1;
+
+    operands.forEach((operand) => {
+        results.forEach((_, j) => {
+            // i don't care about 0, i just kept it in to line up index with target
+            if (j === 0) return 0;
+
+            results[j] += j < operand ? 0 : results[j - operand];
+        });
+    });
+
+    // return results;
+    return results[target];
 }

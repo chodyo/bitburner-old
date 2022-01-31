@@ -202,8 +202,8 @@ export async function main(ns: NS) {
         }
 
         case command.mergeOverlappingIntervals: {
-            const stocks = JSON.parse(flags["intervals"]) as number[][];
-            logger.info("=>", mergeOverlappingIntervals(stocks));
+            const intervals = JSON.parse(flags["intervals"]) as number[][];
+            logger.info("=>", mergeOverlappingIntervals(intervals));
             break;
         }
 
@@ -399,7 +399,11 @@ function mergeOverlappingIntervals(intervals: number[][]) {
     if (intervals.length === 2) {
         const firstHigh = intervals[0][1];
         const secondLow = intervals[1][0];
-        if (firstHigh >= secondLow) return [[intervals[0][0], intervals[1][1]]];
+        if (firstHigh >= secondLow) {
+            const lowestLow = Math.min(intervals[0][0], intervals[1][0]);
+            const highestHigh = Math.max(intervals[0][1], intervals[1][1]);
+            return [[lowestLow, highestHigh]];
+        }
         return intervals;
     }
 

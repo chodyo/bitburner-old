@@ -1,5 +1,6 @@
 import { NS } from "Bitburner";
 import { Logger } from "lib/Logger";
+import { desiredSavings } from "lib/Money";
 
 export async function main(ns: NS) {
     const logger = new Logger(ns);
@@ -11,11 +12,11 @@ export async function main(ns: NS) {
     }
 
     if (iterations === 0) {
-        logger.trace("already had everything");
+        logger.trace("already had all darkweb purchases");
         return;
     }
 
-    logger.toast("done buying darkweb upgrades", "info");
+    logger.toast("done buying darkweb items", "info");
 }
 
 /**
@@ -32,18 +33,27 @@ function buyAllDarkwebUpgrades(ns: NS) {
         logger.toast("bought tor router");
     }
 
+    const minutesOfSavings = 30;
+    const savings = desiredSavings(ns, minutesOfSavings);
+
     return [
-        { name: "BruteSSH.exe", cost: 500e3 },
-        { name: "FTPCrack.exe", cost: 1.5e6 },
-        { name: "relaySMTP.exe", cost: 5e6 },
-        { name: "HTTPWorm.exe", cost: 30e6 },
-        { name: "SQLInject.exe", cost: 250e6 },
+        { name: "BruteSSH.exe", cost: 500e3, keepSavings: false },
+        { name: "FTPCrack.exe", cost: 1.5e6, keepSavings: false },
+        { name: "relaySMTP.exe", cost: 5e6, keepSavings: false },
+        { name: "HTTPWorm.exe", cost: 30e6, keepSavings: false },
+        { name: "SQLInject.exe", cost: 250e6, keepSavings: false },
+
+        { name: "ServerProfiler.exe", cost: 500e3, keepSavings: true },
+        { name: "DeepscanV1.exe", cost: 500e3, keepSavings: true },
+        { name: "AutoLink.exe", cost: 1e6, keepSavings: true },
+        { name: "DeepscanV2.exe", cost: 25e6, keepSavings: true },
     ].every((program) => {
         if (ns.fileExists(program.name, "home")) {
             return true;
         }
 
-        if (ns.getServerMoneyAvailable("home") < program.cost) {
+        const availableCash = ns.getServerMoneyAvailable("home") - (program.keepSavings ? savings : 0);
+        if (availableCash < program.cost) {
             return false;
         }
 

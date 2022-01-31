@@ -244,35 +244,35 @@ async function induceFactionInvite(ns: NS) {
         // Be in Chongqing; $20m
         case Factions.TianDiHui:
         case Factions.Chongqing:
-            if (ns.travelToCity("Chongqing")) {
+            if (ns.getPlayer().city !== "Chongqing" && ns.travelToCity("Chongqing")) {
                 logger.toast(`traveled to Chongqing to try to join ${firstFactionWithUnownedAugs}`);
             }
             break;
 
         // Be in New Tokyo; $20m
         case Factions.NewTokyo:
-            if (ns.travelToCity("New Tokyo")) {
+            if (ns.getPlayer().city !== "New Tokyo" && ns.travelToCity("New Tokyo")) {
                 logger.toast("traveled to New Tokyo to try to join New Tokyo");
             }
             break;
 
         // Be in Ishima; $30m
         case Factions.Ishima:
-            if (ns.travelToCity("Ishima")) {
+            if (ns.getPlayer().city !== "Ishima" && ns.travelToCity("Ishima")) {
                 logger.toast("traveled to Ishima to try to join Ishima");
             }
             break;
 
         // Be in Aevum; $40m
         case Factions.Aevum:
-            if (ns.travelToCity("Aevum")) {
+            if (ns.getPlayer().city !== "Aevum" && ns.travelToCity("Aevum")) {
                 logger.toast("traveled to Aevum to try to join Aevum");
             }
             break;
 
         // Be in Aevum; $50m
         case Factions.Volhaven:
-            if (ns.travelToCity("Volhaven")) {
+            if (ns.getPlayer().city !== "Volhaven" && ns.travelToCity("Volhaven")) {
                 logger.toast("traveled to Volhaven to try to join Volhaven");
             }
             break;

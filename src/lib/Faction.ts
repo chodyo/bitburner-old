@@ -1,5 +1,6 @@
 import { NS } from "Bitburner";
 import { Logger } from "/lib/Logger";
+import { connect } from "/lib/Connect";
 
 const infinitelyUpgradableAug = "NeuroFlux Governor";
 
@@ -228,16 +229,9 @@ async function induceFactionInvite(ns: NS) {
     switch (firstFactionWithUnownedAugs) {
         // Install a backdoor on the CSEC server
         case Factions.CyberSec: {
-            const connected = ["foodnstuff", "CSEC"].every((hostname) => ns.connect(hostname));
-            if (!connected) {
-                throw new Error("failed to backdoor CSEC");
-            }
-            await ns.installBackdoor();
-            const returnedHome = ["foodnstuff", "home"].every((hostname) => ns.connect(hostname));
-            if (!returnedHome) {
-                throw new Error("backdoored CSEC but failed to return home");
-            }
-            logger.toast("backdoored CSEC");
+            const hostname = "CSEC";
+            await backdoor(ns, hostname);
+            logger.toast(`backdoored ${hostname}`);
             break;
         }
 
@@ -278,8 +272,44 @@ async function induceFactionInvite(ns: NS) {
             }
             break;
 
+        // Install a backdoor on the avmnite-02h server
+        case Factions.NiteSec: {
+            const hostname = "avmnite-02h";
+            await backdoor(ns, hostname);
+            logger.toast(`backdoored ${hostname}`);
+            break;
+        }
+
+        // Install a backdoor on the I.I.I.I server
+        case Factions.TheBlackHand: {
+            const hostname = "I.I.I.I";
+            await backdoor(ns, hostname);
+            logger.toast(`backdoored ${hostname}`);
+            break;
+        }
+
+        // Install a backdoor on the run4theh111z server
+        case Factions.BitRunners: {
+            const hostname = "run4theh111z";
+            await backdoor(ns, hostname);
+            logger.toast(`backdoored ${hostname}`);
+            break;
+        }
+
         default: {
             logger.warn(`trying to induce invite to ${firstFactionWithUnownedAugs} but not implemented`);
         }
+    }
+}
+
+async function backdoor(ns: NS, hostname: string) {
+    const connected = connect(ns, hostname);
+    if (!connected) {
+        throw new Error(`failed to connect to backdoor ${hostname}`);
+    }
+    await ns.installBackdoor();
+    const returnedHome = connect(ns, "home");
+    if (!returnedHome) {
+        throw new Error(`backdoored ${hostname} but failed to return home`);
     }
 }

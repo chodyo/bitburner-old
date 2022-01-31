@@ -10,8 +10,7 @@ export async function main(ns: NS) {
 function connect(ns: NS, searchHost: string) {
     const logger = new Logger(ns, { stdout: true });
 
-    const checkedHosts = new Map<string, boolean>();
-    const chain = recursivelyFindHost(ns, "home", searchHost, checkedHosts);
+    const chain = recursivelyFindHost(ns, "home", searchHost);
     if (chain.length === 0) {
         logger.warn(searchHost, "not found");
         return;
@@ -22,13 +21,14 @@ function connect(ns: NS, searchHost: string) {
         if (!connected) {
             logger.warn("failed to connect to", searchHost);
         }
+        logger.info("connect chain", chain);
         return;
     }
 
     logger.info("host found, connect by", chain.join(" ➡ "));
 }
 
-function recursivelyFindHost(ns: NS, hostname: string, searchHost: string, checkedHosts: Map<string, boolean>) {
+function recursivelyFindHost(ns: NS, hostname: string, searchHost: string, checkedHosts = new Map<string, boolean>()) {
     if (checkedHosts.get(hostname)) {
         return [];
     }

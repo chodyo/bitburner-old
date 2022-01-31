@@ -222,6 +222,7 @@ async function induceFactionInvite(ns: NS) {
             firstFactionWithUnownedAugs = faction;
             break;
         }
+        logger.trace(`already have every aug from ${faction}`);
     }
 
     switch (firstFactionWithUnownedAugs) {

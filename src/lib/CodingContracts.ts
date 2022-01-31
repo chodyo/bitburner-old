@@ -41,7 +41,7 @@ enum ContractType {
     triangle = "Minimum Path Sum in a Triangle", //               ✔
     uniqueGridPathsI = "Unique Paths in a Grid I",
     uniqueGridPathsII = "Unique Paths in a Grid II",
-    waysToSum = "Total Ways to Sum",
+    waysToSum = "Total Ways to Sum", //                           ✔
 }
 
 class Contract {
@@ -98,6 +98,7 @@ export async function main(ns: NS) {
 
     const flags = ns.flags([
         ["filter", "{}"],
+        ["jumps", "[]"],
         ["intervals", "[[]]"],
         ["ip", ""],
         ["matrix", "[[]]"],
@@ -121,6 +122,10 @@ export async function main(ns: NS) {
                     case ContractType.ip:
                         answer = Array.from(ip(contract.data).keys());
                         break;
+
+                    // case ContractType.jump:
+                    //     answer = Number(jump(contract.data));
+                    //     break;
 
                     case ContractType.largestPrimeFactor:
                         answer = largestPrimeFactor(contract.data);
@@ -173,6 +178,13 @@ export async function main(ns: NS) {
             const ipStr = flags["ip"] as string;
             const validIPAddresses = ip(ipStr);
             logger.info("=>", ...Array.from(validIPAddresses.keys()));
+            break;
+        }
+
+        case command.jump: {
+            const jumps = flags["jumps"] as number[];
+            const canReachEnd = jump(jumps);
+            logger.info("=>", canReachEnd);
             break;
         }
 
@@ -335,6 +347,27 @@ function ip(digits: string, octets = 4) {
         });
     }
     return combinations;
+}
+
+/**
+ * Array Jumping Game
+You are attempting to solve a Coding Contract. You have 1 tries remaining, after which the contract will self-destruct.
+
+
+You are given the following array of integers:
+
+0,10,1
+
+Each element in the array represents your MAXIMUM jump length at that position. This means that if you are at position i and your maximum jump length is n, you can jump to any position from i to i+n.
+
+Assuming you are initially positioned at the start of the array, determine whether you are able to reach the last index.
+
+Your answer should be submitted as 1 or 0, representing true and false respectively
+
+0,10,1 => 0 (start with jump length 0, can't go anywhere)
+ */
+function jump(maxJumpLengths: number[]): boolean {
+    return false;
 }
 
 function largestPrimeFactor(n: number) {

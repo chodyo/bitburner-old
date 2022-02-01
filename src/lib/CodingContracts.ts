@@ -8,11 +8,11 @@ enum command {
     list = "list",
 
     expr = "expr",
-    exprParen = "exprParen",
     ip = "ip",
     jump = "jump",
     largestPrimeFactor = "largestPrimeFactor",
     mergeOverlappingIntervals = "mergeOverlappingIntervals",
+    sanitizeParens = "sanitizeParens",
     spiralize = "spiralize",
     stockTraderI = "stockTraderI",
     stockTraderII = "stockTraderII",
@@ -27,11 +27,11 @@ enum command {
 
 enum ContractType {
     expr = "Find All Valid Math Expressions",
-    exprParen = "Sanitize Parentheses in Expression",
     ip = "Generate IP Addresses", //                              ✔
     jump = "Array Jumping Game",
     largestPrimeFactor = "Find Largest Prime Factor", //          ✔
     mergeOverlappingIntervals = "Merge Overlapping Intervals", // ✔
+    sanitizeParens = "Sanitize Parentheses in Expression",
     spiralize = "Spiralize Matrix", //                            ✔
     stockTraderI = "Algorithmic Stock Trader I", //               ✔
     stockTraderII = "Algorithmic Stock Trader II", //             ✔
@@ -193,13 +193,6 @@ export async function main(ns: NS) {
             break;
         }
 
-        case command.triangle: {
-            const triangleArr = JSON.parse(flags["triangle"]) as number[][];
-            const minimumPath = triangle(triangleArr);
-            logger.info("=>", minimumPath);
-            break;
-        }
-
         case command.largestPrimeFactor: {
             const n = flags["n"] as number;
             logger.info("=>", largestPrimeFactor(n));
@@ -239,6 +232,13 @@ export async function main(ns: NS) {
         case command.stockTraderIV: {
             const stocks = JSON.parse(flags["stocks"]) as number[];
             logger.info("=>", stockTraderIV(stocks));
+            break;
+        }
+
+        case command.triangle: {
+            const triangleArr = JSON.parse(flags["triangle"]) as number[][];
+            const minimumPath = triangle(triangleArr);
+            logger.info("=>", minimumPath);
             break;
         }
 
@@ -430,6 +430,24 @@ function mergeOverlappingIntervals(intervals: number[][]) {
     return merged;
 }
 
+/**
+ * Sanitize Parentheses in Expression
+You are attempting to solve a Coding Contract. You have 10 tries remaining, after which the contract will self-destruct.
+
+
+Given the following string:
+
+((()((a(()(()))(((a
+
+remove the minimum number of invalid parentheses in order to validate the string. If there are multiple minimal ways to validate the string, provide all of the possible results. The answer should be provided as an array of strings. If it is impossible to validate the string the result should be an array with only an empty string.
+
+IMPORTANT: The string may contain letters, not just parentheses. Examples:
+"()())()" -> [()()(), (())()]
+"(a)())()" -> [(a)()(), (a())()]
+")( -> [""]
+ */
+function sanitizeParens() {}
+
 function spiralize(matrix: number[][]): number[] {
     if (matrix.length === 0) {
         return [];
@@ -474,6 +492,15 @@ function stockTraderIV(data: unknown[]) {
     const trends = pricesWithOnlyUpwardTrends(prices);
     return calcMaxProfitFromTrades(trends, tradesRemaining);
 }
+
+/**
+ * You are attempting to solve a Coding Contract. You have 10 tries remaining, after which the contract will self-destruct.
+
+
+Given the following integer array, find the contiguous subarray (containing at least one number) which has the largest sum and return that sum. 'Sum' refers to the sum of all the numbers in the subarray.
+1,4,5,-2,6,-9,5,-5,7,-9,10,-9,-8
+ */
+function subArrayWithMaxSum() {}
 
 function triangle(triangleArr: number[][], depth = 0, i = 0): number {
     if (triangleArr.length === 0 || triangleArr.some((insideArray) => insideArray.length === 0)) {
@@ -522,6 +549,27 @@ function uniqueGridPathsI(gridDimensions: number[]): number {
 
     return uniqueGridPathsI_iterative(gridDimensions);
 }
+
+/**
+ * You are located in the top-left corner of the following grid:
+
+0,0,0,0,0,0,1,
+0,0,0,0,1,0,0,
+0,1,1,0,0,0,0,
+0,0,0,0,0,0,0,
+0,0,0,0,1,0,1,
+0,0,0,1,0,0,0,
+0,0,0,0,1,0,0,
+0,0,0,1,0,0,0,
+
+You are trying reach the bottom-right corner of the grid, but you can only move down or right on each step. Furthermore, there are obstacles on the grid that you cannot move onto. These obstacles are denoted by '1', while empty spaces are denoted by 0.
+
+Determine how many unique paths there are from start to finish.
+
+NOTE: The data returned for this contract is an 2D array of numbers representing the grid.
+ */
+function uniqueGridPathsII() {}
+
 function waysToSum(target: number): number {
     if (target < 1) return 0;
 

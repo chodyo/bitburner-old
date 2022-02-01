@@ -1,6 +1,7 @@
 import { NS } from "Bitburner";
 import { Logger } from "/lib/Logger";
 import { connect } from "/lib/Connect";
+import { gainRootAccess } from "lib/Root";
 
 const infinitelyUpgradableAug = "NeuroFlux Governor";
 
@@ -230,8 +231,9 @@ async function induceFactionInvite(ns: NS) {
         // Install a backdoor on the CSEC server
         case Factions.CyberSec: {
             const hostname = "CSEC";
-            await backdoor(ns, hostname);
-            logger.toast(`backdoored ${hostname}`);
+            if (await backdoor(ns, hostname)) {
+                logger.toast(`backdoored ${hostname}`);
+            }
             break;
         }
 
@@ -275,24 +277,27 @@ async function induceFactionInvite(ns: NS) {
         // Install a backdoor on the avmnite-02h server
         case Factions.NiteSec: {
             const hostname = "avmnite-02h";
-            await backdoor(ns, hostname);
-            logger.toast(`backdoored ${hostname}`);
+            if (await backdoor(ns, hostname)) {
+                logger.toast(`backdoored ${hostname}`);
+            }
             break;
         }
 
         // Install a backdoor on the I.I.I.I server
         case Factions.TheBlackHand: {
             const hostname = "I.I.I.I";
-            await backdoor(ns, hostname);
-            logger.toast(`backdoored ${hostname}`);
+            if (await backdoor(ns, hostname)) {
+                logger.toast(`backdoored ${hostname}`);
+            }
             break;
         }
 
         // Install a backdoor on the run4theh111z server
         case Factions.BitRunners: {
             const hostname = "run4theh111z";
-            await backdoor(ns, hostname);
-            logger.toast(`backdoored ${hostname}`);
+            if (await backdoor(ns, hostname)) {
+                logger.toast(`backdoored ${hostname}`);
+            }
             break;
         }
 
@@ -303,13 +308,21 @@ async function induceFactionInvite(ns: NS) {
 }
 
 async function backdoor(ns: NS, hostname: string) {
+    if (!gainRootAccess(ns, hostname)) {
+        return false;
+    }
+
     const connected = connect(ns, hostname);
     if (!connected) {
         throw new Error(`failed to connect to backdoor ${hostname}`);
     }
+
     await ns.installBackdoor();
+
     const returnedHome = connect(ns, "home");
     if (!returnedHome) {
         throw new Error(`backdoored ${hostname} but failed to return home`);
     }
+
+    return true;
 }

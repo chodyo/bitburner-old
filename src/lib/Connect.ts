@@ -9,7 +9,8 @@ export async function main(ns: NS) {
 }
 
 export function connect(ns: NS, searchHost: string, logger = new Logger(ns)) {
-    const chain = recursivelyFindHost(ns, "home", searchHost);
+    const currentServer = ns.getCurrentServer();
+    const chain = recursivelyFindHost(ns, currentServer, searchHost);
     if (chain.length === 0) {
         logger.warn(searchHost, "not found");
         return false;

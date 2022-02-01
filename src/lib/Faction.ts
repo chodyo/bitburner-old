@@ -154,7 +154,7 @@ function buyAugs(ns: NS) {
     }
 
     // buy
-    while (augs.length > 0 && augs[0].price <= ns.getServerMoneyAvailable("home")) {
+    while (augs.length > 0 && ns.getAugmentationPrice(augs[0].name) <= ns.getServerMoneyAvailable("home")) {
         const aug = augs.shift();
         if (aug === undefined) {
             throw new Error("tried to buy an augmentation but wasn't able to pop off the front of the list");

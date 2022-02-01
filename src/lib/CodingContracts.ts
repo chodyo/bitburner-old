@@ -98,6 +98,7 @@ export async function main(ns: NS) {
 
     const flags = ns.flags([
         ["filter", "{}"],
+        ["grid", "[0,0]"],
         ["jumps", "[]"],
         ["intervals", "[[]]"],
         ["ip", ""],
@@ -157,6 +158,10 @@ export async function main(ns: NS) {
 
                     case ContractType.triangle:
                         answer = triangle(contract.data);
+                        break;
+
+                    case ContractType.uniqueGridPathsI:
+                        answer = uniqueGridPathsI(contract.data);
                         break;
 
                     case ContractType.waysToSum:
@@ -234,6 +239,13 @@ export async function main(ns: NS) {
         case command.stockTraderIV: {
             const stocks = JSON.parse(flags["stocks"]) as number[];
             logger.info("=>", stockTraderIV(stocks));
+            break;
+        }
+
+        case command.uniqueGridPathsI: {
+            const gridDimensions = JSON.parse(flags["grid"]) as number[];
+            const uniquePaths = uniqueGridPathsI(gridDimensions);
+            logger.info("=>", uniquePaths);
             break;
         }
 
@@ -477,6 +489,39 @@ function triangle(triangleArr: number[][], depth = 0, i = 0): number {
     return triangleArr[depth][i] + Math.min(leftSum, rightSum);
 }
 
+function uniqueGridPathsI(gridDimensions: number[]): number {
+    function uniqueGridPathsI_iterative(gridDimensions: number[]): number {
+        const rows = gridDimensions[0],
+            cols = gridDimensions[1];
+
+        const grid: number[][] = new Array(rows + 1).fill(new Array(cols + 1).fill(0));
+        grid[1][1] = 1;
+
+        for (let x = 1; x < grid.length; x++) {
+            for (let y = 1; y < grid[x].length; y++) {
+                const above = grid[x - 1][y],
+                    left = grid[x][y - 1];
+                grid[x][y] = above + left;
+            }
+        }
+
+        return grid[rows][cols];
+    }
+
+    function uniqueGridPathsI_recursive(gridDimensions: number[]): number {
+        if (gridDimensions.some((val) => val === 1)) return 1;
+
+        const rows = gridDimensions[0],
+            cols = gridDimensions[1];
+
+        const down = uniqueGridPathsI_recursive([rows - 1, cols]);
+        const right = uniqueGridPathsI_recursive([rows, cols - 1]);
+
+        return down + right;
+    }
+
+    return uniqueGridPathsI_iterative(gridDimensions);
+}
 function waysToSum(target: number): number {
     if (target < 1) return 0;
 

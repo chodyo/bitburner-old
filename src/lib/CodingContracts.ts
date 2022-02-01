@@ -164,6 +164,10 @@ export async function main(ns: NS) {
                         answer = uniqueGridPathsI(contract.data);
                         break;
 
+                    case ContractType.uniqueGridPathsII:
+                        answer = uniqueGridPathsI(contract.data);
+                        break;
+
                     case ContractType.waysToSum:
                         answer = waysToSum(contract.data);
                         break;
@@ -245,6 +249,13 @@ export async function main(ns: NS) {
         case command.uniqueGridPathsI: {
             const gridDimensions = JSON.parse(flags["grid"]) as number[];
             const uniquePaths = uniqueGridPathsI(gridDimensions);
+            logger.info("=>", uniquePaths);
+            break;
+        }
+
+        case command.uniqueGridPathsII: {
+            const grid = JSON.parse(flags["grid"]) as number[][];
+            const uniquePaths = uniqueGridPathsII(grid);
             logger.info("=>", uniquePaths);
             break;
         }
@@ -542,37 +553,15 @@ function triangle(triangleArr: number[][], depth = 0, i = 0): number {
 }
 
 function uniqueGridPathsI(gridDimensions: number[]): number {
-    function uniqueGridPathsI_iterative(gridDimensions: number[]): number {
-        const rows = gridDimensions[0],
-            cols = gridDimensions[1];
+    const rows = gridDimensions[0],
+        cols = gridDimensions[1];
 
-        const grid: number[][] = new Array(rows + 1).fill(new Array(cols + 1).fill(0));
-        grid[1][1] = 1;
+    if (rows < 1 || cols < 1) return 0;
 
-        for (let x = 1; x < grid.length; x++) {
-            for (let y = 1; y < grid[x].length; y++) {
-                const above = grid[x - 1][y],
-                    left = grid[x][y - 1];
-                grid[x][y] = above + left;
-            }
-        }
+    const grid: number[][] = new Array(rows).fill(undefined).map(() => new Array(cols).fill(0));
 
-        return grid[rows][cols];
-    }
-
-    function uniqueGridPathsI_recursive(gridDimensions: number[]): number {
-        if (gridDimensions.some((val) => val === 1)) return 1;
-
-        const rows = gridDimensions[0],
-            cols = gridDimensions[1];
-
-        const down = uniqueGridPathsI_recursive([rows - 1, cols]);
-        const right = uniqueGridPathsI_recursive([rows, cols - 1]);
-
-        return down + right;
-    }
-
-    return uniqueGridPathsI_iterative(gridDimensions);
+    // return uniqueGridPaths_recursive(grid);
+    return uniqueGridPaths_iterative(grid);
 }
 
 /**
@@ -593,7 +582,43 @@ Determine how many unique paths there are from start to finish.
 
 NOTE: The data returned for this contract is an 2D array of numbers representing the grid.
  */
-function uniqueGridPathsII() {}
+function uniqueGridPathsII(grid: number[][]): number {
+    grid = grid.map((row) => row.map((val) => (val === 1 ? -1 : val)));
+    return uniqueGridPaths_iterative(grid);
+}
+
+function uniqueGridPaths_iterative(grid: number[][]): number {
+    for (let x = 0; x < grid.length; x++) {
+        for (let y = 0; y < grid[x].length; y++) {
+            // start position
+            if (x === 0 && y === 0) {
+                grid[x][y] = 1;
+                continue;
+            }
+
+            let above = x === 0 ? 0 : grid[x - 1][y];
+            above = above === -1 ? 0 : above;
+
+            let left = y === 0 ? 0 : grid[x][y - 1];
+            left = left === -1 ? 0 : left;
+
+            grid[x][y] = grid[x][y] === -1 ? -1 : above + left;
+        }
+    }
+
+    const rows = grid.length;
+    const cols = grid[rows - 1].length;
+    return grid[rows - 1][cols - 1];
+}
+
+function uniqueGridPaths_recursive(grid: number[][]): number {
+    if (grid.length === 1 || grid.some((row) => row.length === 1)) return 1;
+
+    const down = uniqueGridPaths_recursive(grid.slice(1));
+    const right = uniqueGridPaths_recursive(grid.map((row) => row.slice(1)));
+
+    return down + right;
+}
 
 function waysToSum(target: number): number {
     if (target < 1) return 0;

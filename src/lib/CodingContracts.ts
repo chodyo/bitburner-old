@@ -124,9 +124,9 @@ export async function main(ns: NS) {
                         answer = Array.from(ip(contract.data).keys());
                         break;
 
-                    // case ContractType.jump:
-                    //     answer = Number(jump(contract.data));
-                    //     break;
+                    case ContractType.jump:
+                        answer = Number(jump(contract.data));
+                        break;
 
                     case ContractType.largestPrimeFactor:
                         answer = largestPrimeFactor(contract.data);
@@ -191,7 +191,7 @@ export async function main(ns: NS) {
         }
 
         case command.jump: {
-            const jumps = flags["jumps"] as number[];
+            const jumps = JSON.parse(flags["jumps"]) as number[];
             const canReachEnd = jump(jumps);
             logger.info("=>", canReachEnd);
             break;
@@ -338,7 +338,9 @@ Output: [1+2+3, 1*2*3]
 Input: digits = "105", target = 5
 Output: [1*0+5, 10-5]
  */
-function expr() {}
+function expr(): string[] {
+    return [];
+}
 
 /**
  * e.g. 25525511135 -> [255.255.11.135, 255.255.111.35]
@@ -397,25 +399,20 @@ function ip(digits: string, octets = 4) {
     return combinations;
 }
 
-/**
- * Array Jumping Game
-You are attempting to solve a Coding Contract. You have 1 tries remaining, after which the contract will self-destruct.
-
-
-You are given the following array of integers:
-
-0,10,1
-
-Each element in the array represents your MAXIMUM jump length at that position. This means that if you are at position i and your maximum jump length is n, you can jump to any position from i to i+n.
-
-Assuming you are initially positioned at the start of the array, determine whether you are able to reach the last index.
-
-Your answer should be submitted as 1 or 0, representing true and false respectively
-
-0,10,1 => 0 (start with jump length 0, can't go anywhere)
- */
 function jump(maxJumpLengths: number[]): boolean {
-    return false;
+    const reachable = new Array(maxJumpLengths.length).fill(false);
+    reachable[0] = true;
+
+    maxJumpLengths.forEach((distance, i) => {
+        if (!reachable[i]) return;
+
+        distance = Math.min(distance, reachable.length - 1);
+        while (distance > 0) {
+            reachable[i + distance--] = true;
+        }
+    });
+
+    return reachable[reachable.length - 1];
 }
 
 function largestPrimeFactor(n: number) {
@@ -482,7 +479,9 @@ IMPORTANT: The string may contain letters, not just parentheses. Examples:
 "(a)())()" -> [(a)()(), (a())()]
 ")( -> [""]
  */
-function sanitizeParens() {}
+function sanitizeParens(): string[] {
+    return [];
+}
 
 function spiralize(matrix: number[][]): number[] {
     if (matrix.length === 0) {
@@ -536,7 +535,9 @@ function stockTraderIV(data: unknown[]) {
 Given the following integer array, find the contiguous subarray (containing at least one number) which has the largest sum and return that sum. 'Sum' refers to the sum of all the numbers in the subarray.
 1,4,5,-2,6,-9,5,-5,7,-9,10,-9,-8
  */
-function subArrayWithMaxSum() {}
+function subArrayWithMaxSum(): number[] {
+    return [];
+}
 
 function triangle(triangleArr: number[][], depth = 0, i = 0): number {
     if (triangleArr.length === 0 || triangleArr.some((insideArray) => insideArray.length === 0)) {
@@ -564,24 +565,6 @@ function uniqueGridPathsI(gridDimensions: number[]): number {
     return uniqueGridPaths_iterative(grid);
 }
 
-/**
- * You are located in the top-left corner of the following grid:
-
-0,0,0,0,0,0,1,
-0,0,0,0,1,0,0,
-0,1,1,0,0,0,0,
-0,0,0,0,0,0,0,
-0,0,0,0,1,0,1,
-0,0,0,1,0,0,0,
-0,0,0,0,1,0,0,
-0,0,0,1,0,0,0,
-
-You are trying reach the bottom-right corner of the grid, but you can only move down or right on each step. Furthermore, there are obstacles on the grid that you cannot move onto. These obstacles are denoted by '1', while empty spaces are denoted by 0.
-
-Determine how many unique paths there are from start to finish.
-
-NOTE: The data returned for this contract is an 2D array of numbers representing the grid.
- */
 function uniqueGridPathsII(grid: number[][]): number {
     grid = grid.map((row) => row.map((val) => (val === 1 ? -1 : val)));
     return uniqueGridPaths_iterative(grid);

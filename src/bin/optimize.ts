@@ -19,6 +19,7 @@ export async function main(ns: NS) {
         "/lib/Pserv.js",
         "/lib/Faction.js",
         "/bin/startHack.js",
+        "/bin/contracts.js",
     ];
     while (true) {
         backgroundScripts.forEach((filename) => {

@@ -94,8 +94,6 @@ type Filters = {
 };
 
 export async function main(ns: NS) {
-    const logger = new Logger(ns, { stdout: true, enableNSTrace: true });
-
     const flags = ns.flags([
         ["filter", "{}"],
         ["grid", "[0,0]"],
@@ -106,7 +104,11 @@ export async function main(ns: NS) {
         ["n", -1],
         ["stocks", "[]"],
         ["triangle", "[[]]"],
+        ["quiet", false],
     ]);
+
+    const verbose = !flags["quiet"] as boolean;
+    const logger = new Logger(ns, { stdout: verbose, enableNSTrace: false });
 
     switch (flags["_"][0]) {
         case command.find:

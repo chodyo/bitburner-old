@@ -167,7 +167,7 @@ export async function main(ns: NS) {
                         break;
 
                     case ContractType.uniqueGridPathsII:
-                        answer = uniqueGridPathsI(contract.data);
+                        answer = uniqueGridPathsII(contract.data);
                         break;
 
                     case ContractType.waysToSum:

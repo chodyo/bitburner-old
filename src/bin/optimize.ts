@@ -9,7 +9,8 @@ export async function main(ns: NS) {
     const logger = new Logger(ns);
     logger.trace("starting");
 
-    const oneTimeScripts = ["/lib/Darkweb.js"];
+    // scripts that know when there's nothing left to do and exit on their own
+    const oneTimeScripts = ["/lib/Darkweb.js", "/lib/Pserv.js"];
     oneTimeScripts.forEach((filename) => {
         if (alreadyDeployed(ns, filename, "home")) return;
         const result: "success" | "error" = ns.run(filename) ? "success" : "error";
@@ -19,7 +20,6 @@ export async function main(ns: NS) {
     const backgroundScripts = [
         "/lib/Home.js",
         "/lib/Hacknet.js",
-        "/lib/Pserv.js",
         "/lib/Faction.js",
         "/bin/startHack.js",
         "/bin/contracts.js",

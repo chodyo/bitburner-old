@@ -93,35 +93,102 @@ type Filters = {
     faction?: string;
 };
 
+class ContractsFlags {
+    private ns: NS;
+    private flags: any;
+
+    constructor(ns: NS) {
+        this.ns = ns;
+
+        const schema: [string, string | number | boolean | string[]][] = [
+            ["quiet", false], // logging
+            ["filter", "{}"], // filter
+            ["expression", ""], // expr
+            ["target", -Infinity], // expr, waysToSum
+            ["digits", ""], // ip
+            ["distances", []], // jump
+            ["n", -Infinity], // largestPrimeFactor
+            ["i", []], // mergeOverlappingIntervals
+            ["matrix", []], // spiralize
+            ["stocks", []], // stocks
+            ["trades", -Infinity], // stockTraderIV
+            ["triangle", []], // triangle
+            ["dimensions", []], // uniqueGridPathsI
+            ["grid", []], // uniqueGridPathsII
+        ];
+
+        this.flags = ns.flags(schema);
+    }
+
+    get command(): command | undefined {
+        const unflagged = this.flags["_"];
+        if (unflagged.length > 1) return undefined;
+        return (unflagged[0] as command) || undefined;
+    }
+
+    get filters(): Filters | undefined {
+        try {
+            const givenFilter = this.flags["filter"];
+            if (!givenFilter) return {};
+            return JSON.parse(givenFilter) as Filters;
+        } catch {
+            return undefined;
+        }
+    }
+
+    boolean(name: string): boolean {
+        return this.flags[name] as boolean;
+    }
+
+    string(name: string): string {
+        return (this.flags[name] as string) || "";
+    }
+
+    number(name: string): number {
+        return (this.flags[name] as number) || -Infinity;
+    }
+
+    numberArray(name: string): number[] {
+        try {
+            return JSON.parse(this.flags[name]) as number[];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    numberArray2d(name: string): number[][] {
+        try {
+            return JSON.parse(this.flags[name]) as number[][];
+        } catch (e) {
+            return [];
+        }
+    }
+}
+
 export async function main(ns: NS) {
-    const flags = ns.flags([
-        ["filter", "{}"],
-        ["grid", "[0,0]"],
-        ["jumps", "[]"],
-        ["intervals", "[[]]"],
-        ["ip", ""],
-        ["matrix", "[[]]"],
-        ["n", -1],
-        ["stocks", "[]"],
-        ["triangle", "[[]]"],
-        ["word", "0"],
+    const flags = new ContractsFlags(ns);
 
-        ["quiet", false],
-    ]);
-
-    const verbose = !flags["quiet"] as boolean;
+    const verbose = !flags.boolean("quiet");
     const logger = new Logger(ns, { stdout: verbose, enableNSTrace: false });
 
-    switch (flags["_"][0]) {
+    switch (flags.command) {
         case command.find:
         case command.list:
-            findAndFilterContracts(ns, flags["filter"] as string).forEach((contract) => {
+            if (!flags.filters) {
+                logger.warn(`contracts ${flags.command} --filter {"type":"ip","faction":"ecorp"}`);
+                return;
+            }
+            findAndFilterContracts(ns, flags.filters).forEach((contract) => {
                 logger.info(contract.filename, contract.hostname, contract.type);
             });
             break;
 
         case command.autosolve: {
-            findAndFilterContracts(ns, flags["filter"] as string).forEach((contract) => {
+            if (!flags.filters) {
+                logger.warn(`contracts ${flags.command} --filter {"type":"ip","faction":"ecorp"}`);
+                return;
+            }
+            findAndFilterContracts(ns, flags.filters).forEach((contract) => {
                 let answer: number | string[];
                 switch (contract.type) {
                     case ContractType.expr: {
@@ -195,92 +262,145 @@ export async function main(ns: NS) {
         }
 
         case command.expr: {
-            const word = flags["word"] as string;
-            const target = flags["n"] as number;
-            const exprs = expr(word, target);
-            logger.info("=>", exprs);
+            const expression = flags.string("expression");
+            const target = flags.number("target");
+            if (!expression || target === -Infinity) {
+                logger.warn(`contracts expr --expression 12345 --target 7`);
+                return;
+            }
+            logger.info("=>", expr(expression, target));
             break;
         }
 
         case command.ip: {
-            const ipStr = flags["ip"] as string;
-            const validIPAddresses = ip(ipStr);
+            const digits = flags.string("digits");
+            if (!digits) {
+                logger.warn(`contracts ip --digits 12345`);
+                return;
+            }
+            const validIPAddresses = ip(digits);
             logger.info("=>", ...Array.from(validIPAddresses.keys()));
             break;
         }
 
         case command.jump: {
-            const jumps = JSON.parse(flags["jumps"]) as number[];
-            const canReachEnd = jump(jumps);
-            logger.info("=>", canReachEnd);
+            const ranges = flags.numberArray("distances");
+            if (ranges.length === 0) {
+                logger.warn(`contracts jump --distances [1,2,3]`);
+                return;
+            }
+            logger.info("=>", jump(ranges));
             break;
         }
 
         case command.largestPrimeFactor: {
-            const n = flags["n"] as number;
+            const n = flags.number("n");
+            if (n === -Infinity) {
+                logger.warn(`contracts largestPrimeFactor -n 7`);
+                return;
+            }
             logger.info("=>", largestPrimeFactor(n));
             break;
         }
 
         case command.mergeOverlappingIntervals: {
-            const intervals = JSON.parse(flags["intervals"]) as number[][];
+            const intervals = flags.numberArray2d("i");
+            if (intervals.length === 0 || intervals.some((interval) => interval.length !== 2)) {
+                logger.warn(`contracts mergeOverlappingIntervals -i [[1,5],[4,8]]`);
+                return;
+            }
             logger.info("=>", mergeOverlappingIntervals(intervals));
             break;
         }
 
         case command.spiralize: {
-            const matrix = JSON.parse(flags["matrix"]) as number[][];
+            const matrix = flags.numberArray2d("matrix");
+            if (matrix.length === 0 || matrix.some((row) => row.length !== 2)) {
+                logger.warn(`contracts spiralize --matrix [[1,2],[3,4]]`);
+                return;
+            }
             logger.info("=>", spiralize(matrix));
             break;
         }
 
         case command.stockTraderI: {
-            const stocks = JSON.parse(flags["stocks"]) as number[];
+            const stocks = flags.numberArray("stocks");
+            if (stocks.length === 0) {
+                logger.warn(`contracts stockTraderI --stocks [2,3,1,8,9,12,6,15]`);
+                return;
+            }
             logger.info("=>", stockTraderI(stocks));
             break;
         }
 
         case command.stockTraderII: {
-            const stocks = JSON.parse(flags["stocks"]) as number[];
+            const stocks = flags.numberArray("stocks");
+            if (stocks.length === 0) {
+                logger.warn(`contracts stockTraderII --stocks [2,3,1,8,9,12,6,15]`);
+                return;
+            }
             logger.info("=>", stockTraderII(stocks));
             break;
         }
 
         case command.stockTraderIII: {
-            const stocks = JSON.parse(flags["stocks"]) as number[];
+            const stocks = flags.numberArray("stocks");
+            if (stocks.length === 0) {
+                logger.warn(`contracts stockTraderIII --stocks [2,3,1,8,9,12,6,15]`);
+                return;
+            }
             logger.info("=>", stockTraderIII(stocks));
             break;
         }
 
         case command.stockTraderIV: {
-            const stocks = JSON.parse(flags["stocks"]) as number[];
-            logger.info("=>", stockTraderIV(stocks));
+            const trades = flags.number("trades");
+            const stocks = flags.numberArray("stocks");
+            if (stocks.length === 0) {
+                logger.warn(`contracts stockTraderIV --stocks [2,3,1,8,9,12,6,15] --trades 3`);
+                return;
+            }
+            logger.info("=>", stockTraderIV([trades, stocks]));
             break;
         }
 
         case command.triangle: {
-            const triangleArr = JSON.parse(flags["triangle"]) as number[][];
-            const minimumPath = triangle(triangleArr);
-            logger.info("=>", minimumPath);
+            const t = flags.numberArray2d("triangle");
+            if (t.length === 0 || t.some((row) => row.length === 0)) {
+                logger.warn(`contracts triangle --triangle [[1],[2,3],[4,5,6]]`);
+                return;
+            }
+            logger.info("=>", triangle(t));
             break;
         }
 
         case command.uniqueGridPathsI: {
-            const gridDimensions = JSON.parse(flags["grid"]) as number[];
-            const uniquePaths = uniqueGridPathsI(gridDimensions);
-            logger.info("=>", uniquePaths);
+            const dimensions = flags.numberArray("dimensions");
+            if (dimensions.length === 0) {
+                logger.warn(`contracts uniqueGridPathsI --dimensions [2,3]`);
+                return;
+            }
+            logger.info("=>", uniqueGridPathsI(dimensions));
             break;
         }
 
         case command.uniqueGridPathsII: {
-            const grid = JSON.parse(flags["grid"]) as number[][];
+            const grid = flags.numberArray2d("grid");
+            if (grid.length === 0 || grid.some((row) => row.length === 0)) {
+                logger.warn(`contracts uniqueGridPathsII --grid [[0,0],[1,0]]`);
+                return;
+            }
             const uniquePaths = uniqueGridPathsII(grid);
             logger.info("=>", uniquePaths);
             break;
         }
 
         case command.waysToSum: {
-            const target = flags["n"] as number;
+            const target = flags.number("target");
+            if (target === -Infinity) {
+                logger.warn(`contracts waysToSum --target 7`);
+                return;
+            }
             logger.info("=>", waysToSum(target));
             break;
         }
@@ -295,8 +415,7 @@ export async function main(ns: NS) {
     }
 }
 
-function findAndFilterContracts(ns: NS, filter: string) {
-    const filters: Filters = JSON.parse(filter);
+function findAndFilterContracts(ns: NS, filters: Filters) {
     const contracts = recursivelyFindContracts(ns, "home");
 
     // e.g. "stockTraderIV"
@@ -528,9 +647,9 @@ function stockTraderIII(data: number[]) {
     return calcMaxProfitFromTrades(trends, tradesRemaining);
 }
 
-function stockTraderIV(data: unknown[]) {
-    const tradesRemaining = data[0] as number;
-    const prices = data[1] as number[];
+function stockTraderIV(data: [number, number[]]) {
+    const tradesRemaining = data[0];
+    const prices = data[1];
     const trends = pricesWithOnlyUpwardTrends(prices);
     return calcMaxProfitFromTrades(trends, tradesRemaining);
 }
@@ -542,8 +661,15 @@ function stockTraderIV(data: unknown[]) {
 Given the following integer array, find the contiguous subarray (containing at least one number) which has the largest sum and return that sum. 'Sum' refers to the sum of all the numbers in the subarray.
 1,4,5,-2,6,-9,5,-5,7,-9,10,-9,-8
  */
-function subArrayWithMaxSum(): number[] {
-    return [];
+function subArrayWithMaxSum(numbers: number[]): number {
+    let sum = 0,
+        max = -Infinity;
+    numbers.forEach((n) => {
+        sum = sum + n;
+        max = sum > max ? sum : max;
+        sum = sum < 0 ? 0 : sum;
+    });
+    return max;
 }
 
 function triangle(triangleArr: number[][], depth = 0, i = 0): number {

@@ -104,6 +104,8 @@ export async function main(ns: NS) {
         ["n", -1],
         ["stocks", "[]"],
         ["triangle", "[[]]"],
+        ["word", "0"],
+
         ["quiet", false],
     ]);
 
@@ -182,6 +184,14 @@ export async function main(ns: NS) {
                 if (result) logger.info("result", result);
                 else logger.alert(`failed to solve ${contract}`);
             });
+            break;
+        }
+
+        case command.expr: {
+            const word = flags["word"] as string;
+            const target = flags["n"] as number;
+            const exprs = expr(word, target);
+            logger.info("=>", exprs);
             break;
         }
 
@@ -340,8 +350,24 @@ Output: [1+2+3, 1*2*3]
 Input: digits = "105", target = 5
 Output: [1*0+5, 10-5]
  */
-function expr(): string[] {
-    return [];
+function expr(word: string, target: number): string[] {
+    const operands = word.split("");
+    const operators = ["", "+", "-", "*"];
+
+    const leadingZeroRegex = new RegExp(/[-+*]0\d/);
+
+    let accumulatedExprs = [""];
+    operands.forEach((operand, i) => {
+        accumulatedExprs = accumulatedExprs.flatMap((accumulatedExpr) => {
+            return operators.map((operator) => accumulatedExpr + operator + operand);
+        });
+
+        if (i === 0) {
+            accumulatedExprs = accumulatedExprs.filter((e) => !e.startsWith("*"));
+        }
+    });
+
+    return accumulatedExprs.filter((e) => !e.match(leadingZeroRegex)).filter((e) => eval(e) === target);
 }
 
 /**

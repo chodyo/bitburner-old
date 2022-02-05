@@ -18,7 +18,7 @@ enum command {
     stockTraderII = "stockTraderII",
     stockTraderIII = "stockTraderIII",
     stockTraderIV = "stockTraderIV",
-    subArrayWithMaxSum = "subArrayWithMaxSum",
+    subarrayWithMaxSum = "subarrayWithMaxSum",
     triangle = "triangle",
     uniqueGridPathsI = "uniqueGridPathsI",
     uniqueGridPathsII = "uniqueGridPathsII",
@@ -37,7 +37,7 @@ enum ContractType {
     stockTraderII = "Algorithmic Stock Trader II", //             ✔
     stockTraderIII = "Algorithmic Stock Trader III", //           ✔
     stockTraderIV = "Algorithmic Stock Trader IV", //             ✔
-    subArrayWithMaxSum = "Subarray with Maximum Sum",
+    subarrayWithMaxSum = "Subarray with Maximum Sum",
     triangle = "Minimum Path Sum in a Triangle", //               ✔
     uniqueGridPathsI = "Unique Paths in a Grid I",
     uniqueGridPathsII = "Unique Paths in a Grid II",
@@ -112,6 +112,7 @@ class ContractsFlags {
             ["matrix", []], // spiralize
             ["stocks", []], // stocks
             ["trades", -Infinity], // stockTraderIV
+            ["list", []], // subarrayWithMaxSum
             ["triangle", []], // triangle
             ["dimensions", []], // uniqueGridPathsI
             ["grid", []], // uniqueGridPathsII
@@ -232,6 +233,10 @@ export async function main(ns: NS) {
 
                     case ContractType.stockTraderIV:
                         answer = stockTraderIV(contract.data);
+                        break;
+
+                    case ContractType.subarrayWithMaxSum:
+                        answer = subarrayWithMaxSum(contract.data);
                         break;
 
                     case ContractType.triangle:
@@ -361,6 +366,16 @@ export async function main(ns: NS) {
                 return;
             }
             logger.info("=>", stockTraderIV([trades, stocks]));
+            break;
+        }
+
+        case command.subarrayWithMaxSum: {
+            const list = flags.numberArray("list");
+            if (list.length === 0) {
+                logger.warn(`contracts subarrayWithMaxSum --list [5,6,-15,9]`);
+                return;
+            }
+            logger.info("=>", subarrayWithMaxSum(list));
             break;
         }
 
@@ -661,7 +676,7 @@ function stockTraderIV(data: [number, number[]]) {
 Given the following integer array, find the contiguous subarray (containing at least one number) which has the largest sum and return that sum. 'Sum' refers to the sum of all the numbers in the subarray.
 1,4,5,-2,6,-9,5,-5,7,-9,10,-9,-8
  */
-function subArrayWithMaxSum(numbers: number[]): number {
+function subarrayWithMaxSum(numbers: number[]): number {
     let sum = 0,
         max = -Infinity;
     numbers.forEach((n) => {
@@ -725,15 +740,6 @@ function uniqueGridPaths_iterative(grid: number[][]): number {
     const rows = grid.length;
     const cols = grid[rows - 1].length;
     return grid[rows - 1][cols - 1];
-}
-
-function uniqueGridPaths_recursive(grid: number[][]): number {
-    if (grid.length === 1 || grid.some((row) => row.length === 1)) return 1;
-
-    const down = uniqueGridPaths_recursive(grid.slice(1));
-    const right = uniqueGridPaths_recursive(grid.map((row) => row.slice(1)));
-
-    return down + right;
 }
 
 function waysToSum(target: number): number {

@@ -124,6 +124,13 @@ export async function main(ns: NS) {
             findAndFilterContracts(ns, flags["filter"] as string).forEach((contract) => {
                 let answer: number | string[];
                 switch (contract.type) {
+                    case ContractType.expr: {
+                        const word = contract.data[0] as string;
+                        const target = contract.data[1] as number;
+                        answer = expr(word, target);
+                        break;
+                    }
+
                     case ContractType.ip:
                         answer = Array.from(ip(contract.data).keys());
                         break;
@@ -327,29 +334,6 @@ function recursivelyFindContracts(ns: NS, hostname: string, checkedHosts = new M
     return contracts;
 }
 
-/**
- * Find All Valid Math Expressions
-You are attempting to solve a Coding Contract. You have 10 tries remaining, after which the contract will self-destruct.
-
-
-You are given the following string which contains only digits between 0 and 9:
-
-138727
-
-You are also given a target number of -47. Return all possible ways you can add the +, -, and * operators to the string such that it evaluates to the target number.
-
-The provided answer should be an array of strings containing the valid expressions. The data provided by this problem is an array with two elements. The first element is the string of digits, while the second element is the target number:
-
-["138727", -47]
-
-NOTE: Numbers in the expression cannot have leading 0's. In other words, "1+01" is not a valid expression Examples:
-
-Input: digits = "123", target = 6
-Output: [1+2+3, 1*2*3]
-
-Input: digits = "105", target = 5
-Output: [1*0+5, 10-5]
- */
 function expr(word: string, target: number): string[] {
     const operands = word.split("");
     const operators = ["", "+", "-", "*"];
@@ -370,11 +354,6 @@ function expr(word: string, target: number): string[] {
     return accumulatedExprs.filter((e) => !e.match(leadingZeroRegex)).filter((e) => eval(e) === target);
 }
 
-/**
- * e.g. 25525511135 -> [255.255.11.135, 255.255.111.35]
- * @param digits The string that should be converted to an IP
- * @param octets The number of octets that digits contains; decrement this number when calling recursively
- */
 function ip(digits: string, octets = 4) {
     const combinations = new Map<string, boolean>();
 

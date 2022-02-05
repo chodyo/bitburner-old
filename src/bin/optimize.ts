@@ -3,6 +3,9 @@ import { Logger } from "/lib/Logger";
 import { alreadyDeployed } from "/lib/Deploy";
 
 export async function main(ns: NS) {
+    // Game keeps crashing on reset, maybe delaying the start will help
+    await ns.sleep(1 * 60 * 1000);
+
     const logger = new Logger(ns);
     logger.trace("starting");
 

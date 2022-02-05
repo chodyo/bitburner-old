@@ -155,7 +155,7 @@ function buyAugs(ns: NS) {
     }
 
     // buy
-    while (augs.length > 0 && ns.getAugmentationPrice(augs[0].name) <= ns.getServerMoneyAvailable("home")) {
+    while (augs.length > 0 && augs[0] && ns.getAugmentationPrice(augs[0].name) <= ns.getServerMoneyAvailable("home")) {
         const aug = augs.shift();
         if (aug === undefined) {
             throw new Error("tried to buy an augmentation but wasn't able to pop off the front of the list");
@@ -211,6 +211,7 @@ function unownedUninstalledAugmentsFromFactions(ns: NS, factions: string[]) {
                 price: ns.getAugmentationPrice(aug),
             }))
         )
+        .filter((aug) => !!aug) // just to be safe - for some reason game is crashing on `x.name` where x==undefined
         .filter((aug) => !playerAugs.includes(aug.name))
         .filter((aug) => aug.name !== infinitelyUpgradableAug);
 }

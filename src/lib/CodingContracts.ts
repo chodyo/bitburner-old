@@ -103,7 +103,7 @@ class ContractsFlags {
         const schema: [string, string | number | boolean | string[]][] = [
             ["quiet", false], // logging
             ["filter", "{}"], // filter
-            ["expression", ""], // expr
+            ["expression", ""], // expr, sanitizeParens
             ["target", -Infinity], // expr, waysToSum
             ["digits", ""], // ip
             ["distances", []], // jump
@@ -215,6 +215,10 @@ export async function main(ns: NS) {
                         answer = [JSON.stringify(mergeOverlappingIntervals(contract.data))];
                         break;
 
+                    case ContractType.sanitizeParens:
+                        answer = sanitizeParens(contract.data);
+                        break;
+
                     case ContractType.spiralize:
                         answer = [JSON.stringify(spiralize(contract.data))];
                         break;
@@ -315,6 +319,16 @@ export async function main(ns: NS) {
                 return;
             }
             logger.info("=>", mergeOverlappingIntervals(intervals));
+            break;
+        }
+
+        case command.sanitizeParens: {
+            const expression = flags.string("expression");
+            if (!expression) {
+                logger.warn(`contracts sanitizeParens --expression ((()((a(()(()))(((a`);
+                return;
+            }
+            logger.info("=>", sanitizeParens(expression));
             break;
         }
 
@@ -604,24 +618,65 @@ function mergeOverlappingIntervals(intervals: number[][]) {
     return merged;
 }
 
-/**
- * Sanitize Parentheses in Expression
-You are attempting to solve a Coding Contract. You have 10 tries remaining, after which the contract will self-destruct.
+function sanitizeParens(expression: string): string[] {
+    let permutations = [""];
 
+    // preprocess expression - remove unmatchable close parens from front )()
+    let i = 0;
+    while (i < expression.length) {
+        if (expression[i] === "(") break;
+        if (expression[i] === ")") {
+            expression = expression.slice(0, i) + expression.slice(i + 1);
+            continue;
+        }
+        i++;
+    }
 
-Given the following string:
+    // preprocess expression - remove unmatchable open parens from back ()(
+    let j = expression.length - 1;
+    while (j >= 0) {
+        if (expression[j] === ")") break;
+        if (expression[j] === "(") {
+            expression = expression.slice(0, j) + expression.slice(j + 1);
+            continue;
+        }
+        j--;
+    }
 
-((()((a(()(()))(((a
+    // create every possible permutation made by removing or keeping any parenthesis
+    // !!!! I N E F F I C I E N T !!!!
+    expression.split("").forEach((char) => {
+        if (char === "(" || char === ")") {
+            permutations = permutations.flatMap((permutation) => [permutation, permutation + char]);
+        } else {
+            permutations = permutations.map((permutation) => permutation + char);
+        }
+    });
 
-remove the minimum number of invalid parentheses in order to validate the string. If there are multiple minimal ways to validate the string, provide all of the possible results. The answer should be provided as an array of strings. If it is impossible to validate the string the result should be an array with only an empty string.
+    // remove invalid permutations - unmatched parens
+    permutations = permutations.filter((permutation) => {
+        let stack = 0;
+        for (let i = 0; i < permutation.length; i++) {
+            if (permutation[i] === "(") {
+                stack++;
+            } else if (permutation[i] === ")") {
+                if (stack <= 0) return false;
+                stack--;
+            }
+        }
+        return stack === 0;
+    });
 
-IMPORTANT: The string may contain letters, not just parentheses. Examples:
-"()())()" -> [()()(), (())()]
-"(a)())()" -> [(a)()(), (a())()]
-")( -> [""]
- */
-function sanitizeParens(): string[] {
-    return [];
+    // remove invalid permutations - too many paren removals
+    let longest = 0;
+    permutations.forEach((permutation) => {
+        if (permutation.length > longest) longest = permutation.length;
+    });
+    permutations = permutations.filter((permutation) => permutation.length === longest);
+
+    // this is probably not efficient but i care more about code readability
+    // make sure everything is unique
+    return Array.from(new Set(permutations));
 }
 
 function spiralize(matrix: number[][]): number[] {

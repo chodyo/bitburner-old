@@ -27,21 +27,21 @@ enum command {
 
 enum ContractType {
     expr = "Find All Valid Math Expressions",
-    ip = "Generate IP Addresses", //                              ✔
+    ip = "Generate IP Addresses",
     jump = "Array Jumping Game",
-    largestPrimeFactor = "Find Largest Prime Factor", //          ✔
-    mergeOverlappingIntervals = "Merge Overlapping Intervals", // ✔
+    largestPrimeFactor = "Find Largest Prime Factor",
+    mergeOverlappingIntervals = "Merge Overlapping Intervals",
     sanitizeParens = "Sanitize Parentheses in Expression",
-    spiralize = "Spiralize Matrix", //                            ✔
-    stockTraderI = "Algorithmic Stock Trader I", //               ✔
-    stockTraderII = "Algorithmic Stock Trader II", //             ✔
-    stockTraderIII = "Algorithmic Stock Trader III", //           ✔
-    stockTraderIV = "Algorithmic Stock Trader IV", //             ✔
+    spiralize = "Spiralize Matrix",
+    stockTraderI = "Algorithmic Stock Trader I",
+    stockTraderII = "Algorithmic Stock Trader II",
+    stockTraderIII = "Algorithmic Stock Trader III",
+    stockTraderIV = "Algorithmic Stock Trader IV",
     subarrayWithMaxSum = "Subarray with Maximum Sum",
-    triangle = "Minimum Path Sum in a Triangle", //               ✔
+    triangle = "Minimum Path Sum in a Triangle",
     uniqueGridPathsI = "Unique Paths in a Grid I",
     uniqueGridPathsII = "Unique Paths in a Grid II",
-    waysToSum = "Total Ways to Sum", //                           ✔
+    waysToSum = "Total Ways to Sum",
 }
 
 class Contract {

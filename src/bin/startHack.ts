@@ -1,5 +1,5 @@
 import { NS } from "Bitburner";
-import { shutdownScriptOnRemoteHost, startScriptOnRemoteHost, alreadyDeployed } from "/lib/Deploy";
+import { recursiveDeploy, shutdownScriptOnRemoteHost, startScriptOnRemoteHost, alreadyDeployed } from "/lib/Deploy";
 import { getTarget, getParams, hackFilePath } from "/lib/Hack";
 import { Logger } from "/lib/Logger";
 
@@ -20,7 +20,7 @@ export async function main(ns: NS) {
             alreadyDeployed(
                 ns,
                 hackFilePath,
-                "home",
+                "n00dles",
                 target.hostname,
                 params.moneyThreshold.toString(),
                 params.securityThreshold.toString()
@@ -43,11 +43,12 @@ export async function main(ns: NS) {
             params.securityThreshold.toString()
         );
 
-        logger.trace("spawning deploy", hackFilePath, target, params);
-        ns.spawn(
-            "/bin/deploy.js",
-            1,
+        logger.trace("starting recursive deploy", hackFilePath, target, params);
+        await recursiveDeploy(
+            ns,
+            new Set<string>(),
             hackFilePath,
+            "home",
             target.hostname,
             params.moneyThreshold.toString(),
             params.securityThreshold.toString()

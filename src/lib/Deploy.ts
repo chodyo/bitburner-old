@@ -1,6 +1,8 @@
 import { NS } from "Bitburner";
 import { Logger } from "/lib/Logger";
-import { getServerMaxThreadCountForScript } from "/lib/Mem";
+import { getServerMaxThreadCountForScript, serverHasEnoughMemForScript } from "/lib/Mem";
+import { gainRootAccess } from "/lib/Root";
+import { isHackable } from "/lib/Hack";
 
 /**
  * @description Copy file to remote host and start it with given args
@@ -22,6 +24,10 @@ export function startScriptOnRemoteHost(ns: NS, filename: string, hostname: stri
         threadCount *= 0.9;
     }
     const logger = new Logger(ns);
+    if (threadCount <= 0) {
+        logger.info("skipping script startup due to low threadcount", threadCount);
+        return;
+    }
     logger.info("starting script", filename, hostname, threadCount, ...args);
     ns.exec(filename, hostname, threadCount, ...args);
 }
@@ -56,4 +62,41 @@ function removeScriptOnRemoteHost(ns: NS, filename: string, hostname: string) {
 export function alreadyDeployed(ns: NS, filename: string, hostname: string, ...args: any[]) {
     const scriptInfo = ns.getRunningScript(filename, hostname, ...args);
     return !!scriptInfo;
+}
+
+export async function singleDeploy(ns: NS, filename: string, hostname: string, ...fileArgs: any[]) {
+    const logger = new Logger(ns);
+    logger.trace("working on", filename, hostname);
+
+    if (hostname !== "home" && isDeployableHost(ns, filename, hostname)) {
+        undeploy(ns, filename, hostname);
+        await deploy(ns, filename, hostname, ...fileArgs);
+    }
+}
+
+export async function recursiveDeploy(
+    ns: NS,
+    visited: Set<string>,
+    filename: string,
+    hostname: string,
+    ...fileArgs: any[]
+) {
+    if (visited.has(hostname)) {
+        return;
+    }
+    visited.add(hostname);
+
+    await singleDeploy(ns, filename, hostname, ...fileArgs);
+
+    const remoteHosts = ns.scan(hostname);
+    for (const i in remoteHosts) {
+        const remoteHost = remoteHosts[i];
+        await recursiveDeploy(ns, visited, filename, remoteHost, ...fileArgs);
+    }
+}
+
+function isDeployableHost(ns: NS, filename: string, hostname: string) {
+    return (
+        isHackable(ns, hostname) && serverHasEnoughMemForScript(ns, filename, hostname) && gainRootAccess(ns, hostname)
+    );
 }

@@ -1,6 +1,5 @@
 import { NS } from "Bitburner";
 import { Logger } from "lib/Logger";
-import { hasSourceFile } from "lib/SourceFiles";
 
 const minRoiRecoverySeconds = 30 * 60;
 
@@ -15,6 +14,7 @@ export async function main(ns: NS) {
     const logger = new Logger(ns);
     logger.alert(`reminder: hard coded bitNodeMult=${getBitnodeMult(ns)} for SF4.1`, "warning");
     logger.info(`hacknet production mult ${ns.getHacknetMultipliers().production}`);
+    logger.info(`bitnode hacknet mult ${getBitnodeMult(ns)}`);
 
     while (hacknetUpgradable(ns)) {
         let upgradeCount = 0;
@@ -135,6 +135,8 @@ function bestUpgrade(ns: NS) {
 }
 
 function shouldIBuyUpgrade(ns: NS, cost: number, extraCashRate: number) {
+    if (ns.hacknet.numNodes() === 0) return true;
+
     const cash = ns.getServerMoneyAvailable("home");
 
     const haveEnoughCash = cash >= cost;
@@ -165,8 +167,8 @@ function moneyGainRate(
 
 function getBitnodeMult(ns: NS) {
     // BitNodeMultipliers.HacknetNodeMoney
-    if (hasSourceFile(ns, 5, 1)) {
-        return ns.getBitNodeMultipliers().HacknetNodeMoney;
-    }
+    // if (hasSourceFile(ns, 5, 1)) {
+    //     return ns.getBitNodeMultipliers().HacknetNodeMoney;
+    // }
     return 0.05;
 }

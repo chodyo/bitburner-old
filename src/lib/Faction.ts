@@ -84,7 +84,10 @@ async function joinFactionWithAugsToBuy(ns: NS) {
 
     const augsAvailableFromInvitedFactions = unownedUninstalledAugmentsFromFactions(ns, ns.checkFactionInvitations());
     if (augsAvailableFromInvitedFactions.length > 0) {
-        return ns.joinFaction(augsAvailableFromInvitedFactions[0].faction);
+        [...new Set(augsAvailableFromInvitedFactions.map((aug) => aug.faction))].forEach((faction) =>
+            ns.joinFaction(faction)
+        );
+        return true;
     }
 
     await induceFactionInvite(ns);
@@ -101,7 +104,10 @@ function getEnoughRep(ns: NS) {
         return true;
     }
 
-    const augGoal = augs[0];
+    const corpAugGoal = decideWhoToHackFor(ns, augs);
+    if (corpAugGoal === undefined) logger.alert("ran out of corp aug goal", "warning");
+    else logger.info("corpAugGoal", corpAugGoal);
+    const augGoal = corpAugGoal || augs[0];
 
     const currentWorkFaction = ns.getPlayer().isWorking ? ns.getPlayer().currentWorkFactionName : undefined;
     if (currentWorkFaction && currentWorkFaction !== augGoal.faction) {
@@ -118,6 +124,71 @@ function getEnoughRep(ns: NS) {
     }
 
     return false;
+}
+
+// todo: make this better
+function decideWhoToHackFor(
+    ns: NS,
+    augs: { faction: string; name: string; repreq: number; prereqs: string[]; price: number }[]
+) {
+    const logger = new Logger(ns);
+
+    const corporations = [
+        "ecorp",
+        "megacorp",
+        "kuaigong international",
+        "four sigma",
+        "nwo",
+        "blade industries",
+        "omnitek incorporated",
+        "bachman & associates",
+        "clarke incorporated",
+        "fulcrum secret technologies",
+    ];
+
+    const goodFirstBuys = [
+        "Neurotrainer III", // 130m
+        "Power Recirculation Core", // 180m
+        "ADR-V2 Pheromone Gene", // 550m
+        "FocusWire", // 900m
+        "Neuronal Densification", // 1.375b
+        "nextSENS Gene Modification", // 1.925b
+        "HyperSight Corneal Implant", // 2.75b
+        "SmartJaw", // 2.75b
+        "OmniTek InfoLoad", // 2.875b
+        "Xanipher", // 4.25b
+        "PC Direct-Neural Interface NeuroNet Injector", // 7.5b
+    ].map((s) => s.toLowerCase());
+
+    // const num = (s: string) =>
+    //     Number(s.replace("k", "000").replace("m", "000000").replace("b", "000000000").replace("t", "000000000000"));
+
+    logger.info("augs", augs);
+    const corpsOnly = augs.filter((aug) => corporations.includes(aug.faction.toLowerCase()));
+    logger.info("corp augs", corpsOnly);
+    const firstAugsOnly = corpsOnly.filter((aug) => goodFirstBuys.includes(aug.name.toLowerCase()));
+    logger.info("first augs", firstAugsOnly);
+    firstAugsOnly.forEach((aug) =>
+        logger.info(
+            "favor",
+            ns.getFactionFavor(aug.faction),
+            ns.getFactionFavorGain(aug.faction),
+            150 > ns.getFactionFavor(aug.faction) + ns.getFactionFavorGain(aug.faction),
+            aug
+        )
+    );
+    const noDonos = firstAugsOnly.filter(
+        // unlock donations at 150 favor
+        (aug) => 150 > ns.getFactionFavor(aug.faction) + ns.getFactionFavorGain(aug.faction)
+    );
+    logger.info("nodonos", noDonos);
+    const sorted = noDonos.sort((a, b) => a.repreq - b.repreq);
+
+    if (sorted.length > 0) {
+        return sorted[0];
+    }
+
+    return undefined;
 }
 
 /**
@@ -194,6 +265,9 @@ function buyNeuroFluxGovernor(ns: NS) {
 }
 
 function installAugs(ns: NS) {
+    // seems to be a bug where the game crashes if you're working
+    // https://github.com/danielyxie/bitburner/issues/2902
+    ns.stopAction();
     ns.installAugmentations("/bin/optimize.js");
 }
 

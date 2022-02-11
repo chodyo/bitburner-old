@@ -103,6 +103,7 @@ class ContractsFlags {
         const schema: [string, string | number | boolean | string[]][] = [
             ["quiet", false], // logging
             ["filter", "{}"], // filter
+            ["daemon", false], // autosolve background daemon
             ["expression", ""], // expr, sanitizeParens
             ["target", -Infinity], // expr, waysToSum
             ["digits", ""], // ip
@@ -135,6 +136,10 @@ class ContractsFlags {
         } catch {
             return undefined;
         }
+    }
+
+    get daemon(): boolean {
+        return this.flags["daemon"];
     }
 
     boolean(name: string): boolean {
@@ -189,84 +194,89 @@ export async function main(ns: NS) {
                 logger.warn(`contracts ${flags.command} --filter {"type":"ip","faction":"ecorp"}`);
                 return;
             }
-            findAndFilterContracts(ns, flags.filters).forEach((contract) => {
-                let answer: number | string[];
-                switch (contract.type) {
-                    case ContractType.expr: {
-                        const word = contract.data[0] as string;
-                        const target = contract.data[1] as number;
-                        answer = expr(word, target);
-                        break;
+            // todo: make autosolve a separate func eh
+            // while flags.daemon
+            do {
+                findAndFilterContracts(ns, flags.filters).forEach((contract) => {
+                    let answer: number | string[];
+                    switch (contract.type) {
+                        case ContractType.expr: {
+                            const word = contract.data[0] as string;
+                            const target = contract.data[1] as number;
+                            answer = expr(word, target);
+                            break;
+                        }
+
+                        case ContractType.ip:
+                            answer = Array.from(ip(contract.data).keys());
+                            break;
+
+                        case ContractType.jump:
+                            answer = Number(jump(contract.data));
+                            break;
+
+                        case ContractType.largestPrimeFactor:
+                            answer = largestPrimeFactor(contract.data);
+                            break;
+
+                        case ContractType.mergeOverlappingIntervals:
+                            answer = [JSON.stringify(mergeOverlappingIntervals(contract.data))];
+                            break;
+
+                        case ContractType.sanitizeParens:
+                            answer = sanitizeParens(contract.data);
+                            break;
+
+                        case ContractType.spiralize:
+                            answer = [JSON.stringify(spiralize(contract.data))];
+                            break;
+
+                        case ContractType.stockTraderI:
+                            answer = stockTraderI(contract.data);
+                            break;
+
+                        case ContractType.stockTraderII:
+                            answer = stockTraderII(contract.data);
+                            break;
+
+                        case ContractType.stockTraderIII:
+                            answer = stockTraderIII(contract.data);
+                            break;
+
+                        case ContractType.stockTraderIV:
+                            answer = stockTraderIV(contract.data);
+                            break;
+
+                        case ContractType.subarrayWithMaxSum:
+                            answer = subarrayWithMaxSum(contract.data);
+                            break;
+
+                        case ContractType.triangle:
+                            answer = triangle(contract.data);
+                            break;
+
+                        case ContractType.uniqueGridPathsI:
+                            answer = uniqueGridPathsI(contract.data);
+                            break;
+
+                        case ContractType.uniqueGridPathsII:
+                            answer = uniqueGridPathsII(contract.data);
+                            break;
+
+                        case ContractType.waysToSum:
+                            answer = waysToSum(contract.data);
+                            break;
+
+                        default:
+                            return;
                     }
-
-                    case ContractType.ip:
-                        answer = Array.from(ip(contract.data).keys());
-                        break;
-
-                    case ContractType.jump:
-                        answer = Number(jump(contract.data));
-                        break;
-
-                    case ContractType.largestPrimeFactor:
-                        answer = largestPrimeFactor(contract.data);
-                        break;
-
-                    case ContractType.mergeOverlappingIntervals:
-                        answer = [JSON.stringify(mergeOverlappingIntervals(contract.data))];
-                        break;
-
-                    case ContractType.sanitizeParens:
-                        answer = sanitizeParens(contract.data);
-                        break;
-
-                    case ContractType.spiralize:
-                        answer = [JSON.stringify(spiralize(contract.data))];
-                        break;
-
-                    case ContractType.stockTraderI:
-                        answer = stockTraderI(contract.data);
-                        break;
-
-                    case ContractType.stockTraderII:
-                        answer = stockTraderII(contract.data);
-                        break;
-
-                    case ContractType.stockTraderIII:
-                        answer = stockTraderIII(contract.data);
-                        break;
-
-                    case ContractType.stockTraderIV:
-                        answer = stockTraderIV(contract.data);
-                        break;
-
-                    case ContractType.subarrayWithMaxSum:
-                        answer = subarrayWithMaxSum(contract.data);
-                        break;
-
-                    case ContractType.triangle:
-                        answer = triangle(contract.data);
-                        break;
-
-                    case ContractType.uniqueGridPathsI:
-                        answer = uniqueGridPathsI(contract.data);
-                        break;
-
-                    case ContractType.uniqueGridPathsII:
-                        answer = uniqueGridPathsII(contract.data);
-                        break;
-
-                    case ContractType.waysToSum:
-                        answer = waysToSum(contract.data);
-                        break;
-
-                    default:
-                        return;
-                }
-                logger.info("attempting to solve", contract.toString(), answer);
-                const result = contract.attempt(answer);
-                if (result) logger.info("result", result);
-                else logger.alert(`failed to solve ${contract}`);
-            });
+                    logger.info("attempting to solve", contract.toString(), answer);
+                    const result = contract.attempt(answer);
+                    if (result) logger.info("result", result);
+                    else logger.alert(`failed to solve ${contract}`);
+                });
+                await ns.sleep(10 * 60 * 1000);
+            } while (flags.daemon);
             break;
         }
 

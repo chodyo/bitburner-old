@@ -1,6 +1,6 @@
 import { NS } from "Bitburner";
-import { Logger } from "lib/Logger";
-import { desiredSavings } from "lib/Money";
+import { Logger } from "/lib/Logger";
+import { desiredSavings } from "/lib/Money";
 
 export async function main(ns: NS) {
     const logger = new Logger(ns);

@@ -1,6 +1,4 @@
 import { NS } from "Bitburner";
-import { deploy } from "lib/Deploy";
-import { getTarget, getParams, hackFilePath } from "lib/Hack";
 import { Logger } from "/lib/Logger";
 import { $, desiredSavings } from "/lib/Money";
 import { GB } from "/lib/Mem";
@@ -64,16 +62,6 @@ async function buyPservUpgrade(ns: NS) {
     }
     logger.info("bought", hostname, ns.nFormat(ram * 1e9, GB));
 
-    const target = getTarget(ns);
-    const params = getParams(ns, target.hostname);
-    await deploy(
-        ns,
-        hackFilePath,
-        hostname,
-        target.hostname,
-        params.moneyThreshold.toString(),
-        params.securityThreshold.toString()
-    );
     return true;
 }
 

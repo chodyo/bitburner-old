@@ -9,7 +9,7 @@ export async function main(ns: NS) {
         { name: "/bin/startHack.js", active: true },
         { name: "/bin/darkweb.js", active: true },
         { name: "/bin/hacknet.js", active: true },
-        { name: "/bin/CodingContracts.js", active: false },
+        { name: "/bin/contracts.js", active: false },
         { name: "/bin/Home.js", active: false },
         { name: "/bin/Pserv.js", active: false },
         { name: "/bin/Faction.js", active: false },
@@ -20,8 +20,8 @@ export async function main(ns: NS) {
             const script = scripts[i];
             if (!script.active) continue;
 
-            const pid = ns.run(script.name, 1);
-            if (!pid) logger.toast(`optimize failed to launch ${script}`, "error");
+            const pid = ns.run(script.name, 1, ...(script.args ? script.args : []));
+            if (!pid) continue;
             while (ns.getRunningScript(pid)) await ns.sleep(1000);
 
             //! for some reason this is returning empty :(
@@ -31,5 +31,6 @@ export async function main(ns: NS) {
                 scripts[i].active = !scriptLogs[scriptLogs.length - 1].toLowerCase().includes("exit 0");
             }
         }
+        return; // todo: remove once i have it nice and pretty
     }
 }

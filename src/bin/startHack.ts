@@ -1,59 +1,57 @@
 import { NS } from "Bitburner";
-import { recursiveDeploy, shutdownScriptOnRemoteHost, startScriptOnRemoteHost, alreadyDeployed } from "/lib/Deploy";
-import { getTarget, getParams, hackFilePath } from "/lib/Hack";
 import { Logger } from "/lib/Logger";
+import { getAllRootedServers } from "/lib/Root";
 
 export async function main(ns: NS) {
     const logger = new Logger(ns);
     logger.trace("starting");
 
-    if (!ns.fileExists(hackFilePath)) {
-        logger.error("file does not exist", hackFilePath);
-        return;
-    }
+    const hackFiles = ["/bin/hack.js", "/bin/grow.js", "/bin/weaken.js", "/lib/Logger.js"];
+    const hackRam = ns.getScriptRam("/bin/hack.js");
 
     while (true) {
-        var target = getTarget(ns);
-        var params = getParams(ns, target.hostname);
+        const rootedServers = Array.from(getAllRootedServers(ns));
 
-        if (
-            alreadyDeployed(
-                ns,
-                hackFilePath,
-                "n00dles",
-                target.hostname,
-                params.moneyThreshold.toString(),
-                params.securityThreshold.toString()
-            )
-        ) {
-            await ns.sleep(60000);
-            continue;
+        for (const hostname of rootedServers) {
+            if (hackFiles.every((filename) => ns.fileExists(filename, hostname))) continue;
+            await ns.scp(hackFiles, hostname);
         }
 
-        logger.toast(`deploying ${hackFilePath} ${JSON.stringify(target)} ${JSON.stringify(params)}`);
+        const myHackingLevel = ns.getHackingLevel();
 
-        // deploy manually to home so we don't mess any files up
-        shutdownScriptOnRemoteHost(ns, hackFilePath, "home");
-        startScriptOnRemoteHost(
-            ns,
-            hackFilePath,
-            "home",
-            target.hostname,
-            params.moneyThreshold.toString(),
-            params.securityThreshold.toString()
-        );
+        const target = rootedServers
+            .filter((hostname) => myHackingLevel > ns.getServerRequiredHackingLevel(hostname))
+            .map((hostname) => ({
+                hostname: hostname,
+                maxMoney: ns.getServerMaxMoney(hostname),
+                money: ns.getServerMoneyAvailable(hostname),
+                minSecurity: ns.getServerMinSecurityLevel(hostname),
+                security: ns.getServerSecurityLevel(hostname),
+            }))
+            // super basic, just choose target to be the one with the highest max money
+            // this could probably be optimized to take into account other factors but idk how to do that yet
+            .reduce((prevHost, currHost) => (prevHost.maxMoney > currHost.maxMoney ? prevHost : currHost));
 
-        logger.trace("starting recursive deploy", hackFilePath, target, params);
-        await recursiveDeploy(
-            ns,
-            new Set<string>(),
-            hackFilePath,
-            "home",
-            target.hostname,
-            params.moneyThreshold.toString(),
-            params.securityThreshold.toString()
-        );
+        // todo: need to figure out an equation for dollars per second when hacking/growing/weakening
 
-        await ns.sleep(60000);
+        // todo: adjust targetMoney/targetSecurity by factoring in active scripts here
+
+        // todo: run hack/grow/weaken while calculating effects
+
+        rootedServers
+            .map((hostname) => ({
+                hostname: hostname,
+                threads: Math.floor((ns.getServerMaxRam(hostname) - ns.getServerUsedRam(hostname)) / hackRam),
+            }))
+            .filter((server) => server.threads)
+            .forEach((server) => {
+                if (ns.exec("/bin/hack.js", server.hostname, server.threads, "--target", target.hostname)) {
+                    logger.info("hacking", target.hostname, server.hostname, server.threads);
+                    return;
+                }
+                logger.error("failed to hack", target.hostname, server.hostname, server.threads);
+            });
+
+        await ns.sleep(5 * 60 * 1000);
     }
 }

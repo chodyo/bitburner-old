@@ -6,9 +6,9 @@ export async function main(ns: NS) {
     const flags = ns.flags([["target", ""]]);
     const target = flags["target"];
     if (!target) {
-        logger.error("run /bin/hack.js --target {hostname}");
+        logger.error("run /bin/grow.js --target {hostname}");
         return;
     }
-    const cash = await ns.hack(target);
-    logger.info(`hacked ${target} for ${ns.nFormat(cash, "$0.00a")}`);
+    const growthMult = await ns.grow(target);
+    logger.info(`grew ${target} by ${growthMult}%`);
 }

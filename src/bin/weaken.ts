@@ -6,9 +6,9 @@ export async function main(ns: NS) {
     const flags = ns.flags([["target", ""]]);
     const target = flags["target"];
     if (!target) {
-        logger.error("run /bin/hack.js --target {hostname}");
+        logger.error("run /bin/weaken.js --target {hostname}");
         return;
     }
-    const cash = await ns.hack(target);
-    logger.info(`hacked ${target} for ${ns.nFormat(cash, "$0.00a")}`);
+    const securityDiff = await ns.weaken(target);
+    logger.info(`weakened ${target} by ${securityDiff}`);
 }

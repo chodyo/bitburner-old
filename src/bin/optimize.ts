@@ -11,7 +11,7 @@ export async function main(ns: NS) {
         { name: "/bin/hacknet.js", active: true },
         { name: "/bin/contracts.js", active: true },
         { name: "/bin/home.js", active: true },
-        { name: "/bin/Pserv.js", active: false },
+        { name: "/bin/pserv.js", active: true },
         { name: "/bin/Faction.js", active: false },
     ];
 

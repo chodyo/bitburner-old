@@ -6,18 +6,24 @@ import { GB } from "/lib/Mem";
 export async function main(ns: NS) {
     const logger = new Logger(ns);
 
-    while (pservUpgradable(ns)) {
-        let upgradeCount = 0;
-        while (await buyPservUpgrade(ns)) {
-            upgradeCount++;
-            await ns.sleep(10);
-        }
-        if (upgradeCount > 0) {
-            logger.toast(`finished buying ${upgradeCount} pserv upgrades :)`);
-        }
-        await ns.sleep(60000);
+    if (!pservUpgradable(ns)) {
+        logger.toast("done buying pserv upgrades", "info");
+
+        // let optimize know not to start it again
+        logger.info("exit 0");
+        return;
     }
-    logger.toast("exiting pserv buyer", "info");
+
+    let upgradeCount = 0;
+    while (await buyPservUpgrade(ns)) {
+        upgradeCount++;
+        await ns.sleep(10);
+    }
+    if (upgradeCount > 0) {
+        logger.toast(`finished buying ${upgradeCount} pserv upgrades :)`);
+    }
+
+    logger.info("exiting pserv buyer");
 }
 
 function pservUpgradable(ns: NS) {

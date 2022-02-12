@@ -23,7 +23,7 @@ export async function main(ns: NS) {
         logger.toast(`finished buying ${upgradeCount} home upgrades :)`);
     }
 
-    logger.toast("exiting Home buyer", "info");
+    logger.info("exiting Home buyer");
 }
 
 function homeUpgradable(ns: NS) {

@@ -25,7 +25,7 @@ export async function main(ns: NS) {
                 logger.toast(`optimize failed to run ${script.name} - recommend temporarily disabling it`);
                 continue;
             }
-            while (ns.getRunningScript(pid)) await ns.sleep(1000);
+            while (ns.getRunningScript(pid)) await ns.sleep(2 * 1000);
 
             //! for some reason this is returning empty :(
             const scriptLogs = ns.getScriptLogs(script.name, "home");
@@ -34,6 +34,5 @@ export async function main(ns: NS) {
                 scripts[i].active = !scriptLogs[scriptLogs.length - 1].toLowerCase().includes("exit 0");
             }
         }
-        return; // todo: remove once i have it nice and pretty
     }
 }

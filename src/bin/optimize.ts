@@ -1,68 +1,35 @@
 import { NS } from "Bitburner";
 import { Logger } from "/lib/Logger";
-import { gainRootAccess } from "/lib/Root";
 
 export async function main(ns: NS) {
     const logger = new Logger(ns);
     logger.trace("starting");
 
-    const deploys = [
-        {
-            scriptname: "/lib/Hacknet.js",
-            destination: "foodnstuff",
-            dependencies: ["/lib/Logger.js"],
-            args: [],
-        },
-        {
-            scriptname: "/lib/CodingContracts.js",
-            destination: "iron-gym",
-            dependencies: [],
-            args: ["autosolve", "--quiet", "--daemon"],
-        },
-        {
-            scriptname: "/lib/Home.js",
-            destination: "sigma-cosmetics",
-            dependencies: ["/lib/Logger.js", "/lib/Money.js"],
-            args: [],
-        },
-        {
-            scriptname: "/lib/Darkweb.js",
-            destination: "joesguns",
-            dependencies: ["/lib/Logger.js", "/lib/Money.js"],
-            args: [],
-        },
+    const scripts = [
+        { name: "/bin/startHack.js", active: true },
+        { name: "/bin/darkweb.js", active: true },
+        { name: "/bin/Hacknet.js", active: false },
+        { name: "/bin/CodingContracts.js", active: false },
+        { name: "/bin/Home.js", active: false },
+        { name: "/bin/Pserv.js", active: false },
+        { name: "/bin/Faction.js", active: false },
     ];
-    for (const deploy of deploys) {
-        if (!gainRootAccess(ns, deploy.destination)) {
-            logger.toast(`no root access on ${deploy.destination} for ${deploy.scriptname}`, "error");
-            continue;
+
+    while (scripts.some((script) => script.active)) {
+        for (let i in scripts) {
+            const script = scripts[i];
+            if (!script.active) continue;
+
+            const pid = ns.run(script.name, 1);
+            if (!pid) logger.toast(`optimize failed to launch ${script}`, "error");
+            while (ns.getRunningScript(pid)) await ns.sleep(1000);
+
+            //! for some reason this is returning empty :(
+            const scriptLogs = ns.getScriptLogs(script.name, "home");
+            logger.trace("script logs", script.name, scriptLogs.length, scriptLogs[scriptLogs.length - 1]);
+            if (scriptLogs.length > 0) {
+                scripts[i].active = !scriptLogs[scriptLogs.length - 1].toLowerCase().includes("exit 0");
+            }
         }
-
-        if (deploy.dependencies.length > 0) await ns.scp(deploy.dependencies, deploy.destination);
-        await ns.scp(deploy.scriptname, deploy.destination);
-
-        ns.scriptKill(deploy.scriptname, deploy.destination);
-        const result: "success" | "error" = ns.exec(deploy.scriptname, deploy.destination, 1, ...deploy.args)
-            ? "success"
-            : "error";
-        logger.toast(`running script ${deploy.scriptname} on ${deploy.destination}: ${result}`, result);
-    }
-
-    // scripts that know when there's nothing left to do and exit on their own
-    const oneTimeScripts = ["/lib/Pserv.js", "/lib/Faction.js", "/bin/startHack.js"];
-    oneTimeScripts.forEach((filename) => {
-        ns.scriptKill(filename, "home");
-        const result: "success" | "error" = ns.exec(filename, "home") ? "success" : "error";
-        logger.toast(`running script ${filename} on home: ${result}`, result);
-    });
-
-    const backgroundScripts = [];
-    while (backgroundScripts.length > 0) {
-        backgroundScripts.forEach((filename) => {
-            ns.scriptKill(filename, "home");
-            const result: "success" | "error" = ns.exec(filename, "home") ? "success" : "error";
-            logger.toast(`running script ${filename} on home: ${result}`, result);
-        });
-        await ns.asleep(60000);
     }
 }

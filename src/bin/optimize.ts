@@ -9,8 +9,8 @@ export async function main(ns: NS) {
         { name: "/bin/startHack.js", active: true },
         { name: "/bin/darkweb.js", active: true },
         { name: "/bin/hacknet.js", active: true },
-        { name: "/bin/contracts.js", active: false },
-        { name: "/bin/Home.js", active: false },
+        { name: "/bin/contracts.js", active: true },
+        { name: "/bin/home.js", active: true },
         { name: "/bin/Pserv.js", active: false },
         { name: "/bin/Faction.js", active: false },
     ];
@@ -21,7 +21,10 @@ export async function main(ns: NS) {
             if (!script.active) continue;
 
             const pid = ns.run(script.name, 1, ...(script.args ? script.args : []));
-            if (!pid) continue;
+            if (!pid) {
+                logger.toast(`optimize failed to run ${script.name} - recommend temporarily disabling it`);
+                continue;
+            }
             while (ns.getRunningScript(pid)) await ns.sleep(1000);
 
             //! for some reason this is returning empty :(

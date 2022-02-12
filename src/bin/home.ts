@@ -5,18 +5,24 @@ import { desiredSavings } from "/lib/Money";
 export async function main(ns: NS) {
     const logger = new Logger(ns);
 
-    while (homeUpgradable(ns)) {
-        let upgradeCount = 0;
-        while (buyHomeUpgrade(ns)) {
-            // buy everything that's worth it as fast as i can
-            upgradeCount++;
-            await ns.sleep(10);
-        }
-        if (upgradeCount > 0) {
-            logger.toast(`finished buying ${upgradeCount} home upgrades :)`);
-        }
-        await ns.sleep(60000);
+    if (!homeUpgradable(ns)) {
+        logger.toast("done buying home upgrades", "info");
+
+        // let optimize know not to start it again
+        logger.info("exit 0");
+        return;
     }
+
+    let upgradeCount = 0;
+    while (buyHomeUpgrade(ns)) {
+        // buy everything that's worth it as fast as i can
+        upgradeCount++;
+        await ns.sleep(10);
+    }
+    if (upgradeCount > 0) {
+        logger.toast(`finished buying ${upgradeCount} home upgrades :)`);
+    }
+
     logger.toast("exiting Home buyer", "info");
 }
 

@@ -7,12 +7,12 @@ export async function main(ns: NS) {
 
     const scripts = [
         { name: "/bin/startHack.js", active: true },
-        { name: "/bin/darkweb.js", active: true },
+        { name: "/bin/darkweb.js", active: false }, // i have everything for now
         { name: "/bin/hacknet.js", active: true },
         { name: "/bin/contracts.js", active: true },
         { name: "/bin/home.js", active: true },
         { name: "/bin/pserv.js", active: true },
-        { name: "/bin/Faction.js", active: false },
+        { name: "/bin/Faction.js", active: false }, //todo: rework
     ];
 
     while (scripts.some((script) => script.active)) {

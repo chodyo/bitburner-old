@@ -31,7 +31,7 @@ export async function main(ns: NS) {
     logger.toast("exiting Hacknet buyer", "info");
 }
 
-function hacknetUpgradable(ns: NS) {
+export function hacknetUpgradable(ns: NS) {
     const h = ns.hacknet;
 
     if (h.numNodes() < h.maxNumNodes() || h.maxNumNodes() === Infinity) {

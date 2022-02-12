@@ -8,7 +8,7 @@ export async function main(ns: NS) {
     const scripts = [
         { name: "/bin/startHack.js", active: true },
         { name: "/bin/darkweb.js", active: true },
-        { name: "/bin/Hacknet.js", active: false },
+        { name: "/bin/hacknet.js", active: true },
         { name: "/bin/CodingContracts.js", active: false },
         { name: "/bin/Home.js", active: false },
         { name: "/bin/Pserv.js", active: false },

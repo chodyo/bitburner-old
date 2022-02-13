@@ -213,17 +213,17 @@ function buyAugs(ns: NS) {
     }
 
     // save money
-    if (augs[0].price > ns.getServerMoneyAvailable("home")) {
-        // todo: maybe come up with a better way of doing this
-        const scriptsThatCostMeMoney = ["/bin/optimize.js", "/lib/Home.js", "/lib/Pserv.js", "/lib/Hacknet.js"];
-        const home = "home";
-        scriptsThatCostMeMoney
-            .filter((filename) => ns.scriptRunning(filename, home))
-            .forEach((filename) => {
-                logger.toast(`shutting down ${filename} to conserve money`);
-                ns.scriptKill(filename, home);
-            });
-    }
+    // if (augs[0].price > ns.getServerMoneyAvailable("home")) {
+    //     // todo: maybe come up with a better way of doing this
+    //     const scriptsThatCostMeMoney = ["/bin/optimize.js", "/lib/Home.js", "/lib/Pserv.js", "/lib/Hacknet.js"];
+    //     const home = "home";
+    //     scriptsThatCostMeMoney
+    //         .filter((filename) => ns.scriptRunning(filename, home))
+    //         .forEach((filename) => {
+    //             logger.toast(`shutting down ${filename} to conserve money`);
+    //             ns.scriptKill(filename, home);
+    //         });
+    // }
 
     // buy
     while (augs.length > 0 && augs[0] && ns.getAugmentationPrice(augs[0].name) <= ns.getServerMoneyAvailable("home")) {

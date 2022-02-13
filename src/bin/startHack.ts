@@ -85,10 +85,10 @@ export async function main(ns: NS) {
             let scriptname = "/bin/hack.js";
             let ram = hackRam;
 
-            if (target.security > target.minSecurity + 5 || Math.random() > 0.95) {
+            if (target.security > target.minSecurity + 5 && Math.random() < 0.95) {
                 scriptname = "/bin/weaken.js";
                 ram = weakenRam;
-            } else if (target.money < 0.9 * target.maxMoney || Math.random() > 0.9) {
+            } else if (target.money < 0.9 * target.maxMoney && Math.random() < 0.9) {
                 scriptname = "/bin/grow.js";
                 ram = growRam;
             }

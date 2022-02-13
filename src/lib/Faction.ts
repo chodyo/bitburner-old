@@ -5,6 +5,8 @@ import { gainRootAccess } from "lib/Root";
 
 const infinitelyUpgradableAug = "NeuroFlux Governor";
 
+export const factionPort = 2;
+
 enum Factions {
     CyberSec = "CyberSec",
     TianDiHui = "Tian Di Hui",
@@ -28,55 +30,10 @@ enum Factions {
 
 export async function main(ns: NS) {
     const logger = new Logger(ns);
-
-    let currentFactionState: "joinFaction" | "getRep" | "buyAugs" | "buyNeuroFluxGovernor" | "installAugs" =
-        "joinFaction";
-
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-        if (currentFactionState === "joinFaction") {
-            const joined = await joinFactionWithAugsToBuy(ns);
-            if (joined) {
-                logger.toast("done joining faction with augs i need");
-                currentFactionState = "getRep";
-            }
-        }
-
-        if (currentFactionState === "getRep") {
-            const maxxed = getEnoughRep(ns);
-            if (maxxed) {
-                logger.toast("done accumulating rep to buy augs");
-                currentFactionState = "buyAugs";
-            }
-        }
-
-        if (currentFactionState === "buyAugs") {
-            const noneLeft = buyAugs(ns);
-            if (noneLeft) {
-                logger.toast("done buying augs");
-                currentFactionState = "buyNeuroFluxGovernor";
-            }
-        }
-
-        if (currentFactionState === "buyNeuroFluxGovernor") {
-            const outOfMoney = buyNeuroFluxGovernor(ns);
-            if (outOfMoney) {
-                logger.toast("done buying neuroflux governor upgrades");
-                currentFactionState = "installAugs";
-            }
-        }
-
-        if (currentFactionState === "installAugs") {
-            logger.toast("installing augs");
-            installAugs(ns);
-        }
-
-        await ns.sleep(60000);
-    }
-    logger.toast("exiting augments buyer", "info");
+    logger.toast("use /bin/faction.js instead", "info");
 }
 
-async function joinFactionWithAugsToBuy(ns: NS) {
+export async function joinFactionWithAugsToBuy(ns: NS) {
     const augsAvailableFromJoinedFactions = unownedUninstalledAugmentsFromFactions(ns, ns.getPlayer().factions);
     if (augsAvailableFromJoinedFactions.length > 0) {
         return true;
@@ -93,7 +50,7 @@ async function joinFactionWithAugsToBuy(ns: NS) {
     await induceFactionInvite(ns);
 }
 
-function getEnoughRep(ns: NS) {
+export function getEnoughRep(ns: NS) {
     const logger = new Logger(ns);
 
     const augs = unownedUninstalledAugmentsFromFactions(ns, ns.getPlayer().factions)
@@ -194,7 +151,7 @@ function decideWhoToHackFor(
 /**
  * By the time we get to this func, we already have enough rep for everything
  */
-function buyAugs(ns: NS) {
+export function buyAugs(ns: NS) {
     const logger = new Logger(ns);
 
     const includePurchased = true;
@@ -247,7 +204,7 @@ function buyAugs(ns: NS) {
     return augs.length === 0;
 }
 
-function buyNeuroFluxGovernor(ns: NS) {
+export function buyNeuroFluxGovernor(ns: NS) {
     const logger = new Logger(ns);
 
     if (ns.getPlayer().factions.length === 0) {
@@ -264,7 +221,7 @@ function buyNeuroFluxGovernor(ns: NS) {
     return true;
 }
 
-function installAugs(ns: NS) {
+export function installAugs(ns: NS) {
     // seems to be a bug where the game crashes if you're working
     // https://github.com/danielyxie/bitburner/issues/2902
     ns.stopAction();

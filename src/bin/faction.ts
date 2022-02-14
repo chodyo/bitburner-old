@@ -40,15 +40,20 @@ function getControlMsg(state: string): ScriptResult {
     switch (state) {
         case "joinFaction":
             nextState = "getRep";
+            break;
         case "getRep":
             nextState = "buyAugs";
+            break;
         case "buyAugs":
             nextState = "buyNeuroFluxGovernor";
+            break;
         case "buyNeuroFluxGovernor":
             nextState = "installAugs";
+            break;
         case "installAugs":
         default:
             nextState = "exit";
+            break;
     }
     return { script: "/bin/faction.js", done: state, next: nextState };
 }

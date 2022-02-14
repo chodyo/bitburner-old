@@ -20,8 +20,8 @@ export async function main(ns: NS) {
 
     const myHackingLevel = ns.getHackingLevel();
 
-    const target = rootedServers
-        .filter((hostname) => myHackingLevel > ns.getServerRequiredHackingLevel(hostname))
+    const potentialTargets = rootedServers
+        .filter((hostname) => myHackingLevel >= ns.getServerRequiredHackingLevel(hostname))
         .map((hostname) => ({
             hostname: hostname,
 
@@ -32,7 +32,11 @@ export async function main(ns: NS) {
             security: ns.getServerSecurityLevel(hostname),
 
             hackChance: ns.hackAnalyzeChance(hostname),
-        }))
+        }));
+
+    if (potentialTargets.length === 0) return;
+
+    const target = potentialTargets
         // super basic, just choose target to be the one with the highest max money
         // this could probably be optimized to take into account other factors but idk how to do that yet
         .reduce((prevHost, currHost) => (prevHost.maxMoney > currHost.maxMoney ? prevHost : currHost));

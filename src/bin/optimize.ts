@@ -1,15 +1,12 @@
 import { NS } from "Bitburner";
-import { factionPort } from "/lib/Faction";
 import { Logger } from "/lib/Logger";
-
-type ScriptResult = {
-    done: boolean;
-    next: string;
-};
+import { controlPort, ScriptResult } from "/lib/Optimize";
 
 export async function main(ns: NS) {
     const logger = new Logger(ns);
     logger.trace("starting");
+
+    const controlPortHandle = ns.getPortHandle(controlPort);
 
     const scripts = [
         { name: "/bin/startHack.js", active: true },
@@ -18,26 +15,27 @@ export async function main(ns: NS) {
         { name: "/bin/contracts.js", active: true },
         { name: "/bin/home.js", active: true },
         { name: "/bin/pserv.js", active: true },
-        {
-            name: "/bin/faction.js",
-            active: true,
-            args: ["--state", "joinFaction"],
-            port: ns.getPortHandle(factionPort),
-        },
+        { name: "/bin/faction.js", active: true, args: ["--state", "joinFaction"] },
     ];
 
     while (scripts.some((script) => script.active)) {
+        const control = new Map<string, ScriptResult>();
+        while (!controlPortHandle.empty()) {
+            const msg: ScriptResult = JSON.parse(controlPortHandle.read().toString());
+            control.set(msg.script, msg);
+        }
+
         for (let i in scripts) {
             const script = scripts[i];
 
-            while (script.port && !script.port?.empty()) {
-                const result: ScriptResult = JSON.parse(script.port.read().toString());
-                logger.trace("script", script.name, "last result", result);
-
-                if (result.next === "exit") scripts[i].active = false;
+            const controlMsg = control.get(script.name);
+            if (controlMsg) {
+                logger.trace("control msg", controlMsg);
+                if (controlMsg.next === "exit") scripts[i].active = false;
                 else scripts[i].active = true;
 
-                if (result.next && script.args?.length > 0) scripts[i].args = [script.args[0], result.next];
+                if (controlMsg.next && script.args && script.args.length > 0)
+                    scripts[i].args = [script.args[0], controlMsg.next];
             }
 
             if (!script.active) continue;

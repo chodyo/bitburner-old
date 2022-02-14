@@ -5,8 +5,6 @@ import { gainRootAccess } from "lib/Root";
 
 const infinitelyUpgradableAug = "NeuroFlux Governor";
 
-export const factionPort = 2;
-
 enum Factions {
     CyberSec = "CyberSec",
     TianDiHui = "Tian Di Hui",

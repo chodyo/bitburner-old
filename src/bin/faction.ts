@@ -1,13 +1,7 @@
 import { NS } from "Bitburner";
-import {
-    joinFactionWithAugsToBuy,
-    factionPort,
-    getEnoughRep,
-    buyAugs,
-    buyNeuroFluxGovernor,
-    installAugs,
-} from "/lib/Faction";
 import { Logger } from "/lib/Logger";
+import { joinFactionWithAugsToBuy, getEnoughRep, buyAugs, buyNeuroFluxGovernor, installAugs } from "/lib/Faction";
+import { ScriptResult, sendControlMsg } from "/lib/Optimize";
 
 export async function main(ns: NS) {
     const logger = new Logger(ns);
@@ -19,16 +13,16 @@ export async function main(ns: NS) {
 
     switch (state) {
         case "joinFaction":
-            if (await joinFactionWithAugsToBuy(ns)) progressState(ns, state);
+            if (await joinFactionWithAugsToBuy(ns)) sendControlMsg(ns, getControlMsg(state));
             break;
         case "getRep":
-            if (getEnoughRep(ns)) progressState(ns, state);
+            if (getEnoughRep(ns)) sendControlMsg(ns, getControlMsg(state));
             break;
         case "buyAugs":
-            if (buyAugs(ns)) progressState(ns, state);
+            if (buyAugs(ns)) sendControlMsg(ns, getControlMsg(state));
             break;
         case "buyNeuroFluxGovernor":
-            if (buyNeuroFluxGovernor(ns)) progressState(ns, state);
+            if (buyNeuroFluxGovernor(ns)) sendControlMsg(ns, getControlMsg(state));
             break;
         case "installAugs":
             installAugs(ns);
@@ -41,27 +35,20 @@ export async function main(ns: NS) {
     logger.trace("exiting faction");
 }
 
-function progressState(ns: NS, state: string) {
-    const logger = new Logger(ns);
-    const msg = JSON.stringify({ done: state, next: nextState(state) });
-    if (ns.getPortHandle(factionPort).tryWrite(msg)) {
-        logger.info("successfully reported state completion", msg);
-        return;
-    }
-    logger.toast(`failed to update state completion ${msg} port=${factionPort}`, "error");
-}
-
-function nextState(state: string) {
+function getControlMsg(state: string): ScriptResult {
+    let nextState = "";
     switch (state) {
         case "joinFaction":
-            return "getRep";
+            nextState = "getRep";
         case "getRep":
-            return "buyAugs";
+            nextState = "buyAugs";
         case "buyAugs":
-            return "buyNeuroFluxGovernor";
+            nextState = "buyNeuroFluxGovernor";
         case "buyNeuroFluxGovernor":
-            return "installAugs";
+            nextState = "installAugs";
         case "installAugs":
-            return "exit";
+        default:
+            nextState = "exit";
     }
+    return { script: "/bin/faction.js", done: state, next: nextState };
 }

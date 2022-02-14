@@ -8,6 +8,10 @@ export async function main(ns: NS) {
     connect(ns, hostname, logger);
 }
 
+export function autocomplete(data: unknown) {
+    return [...data.servers];
+}
+
 export function connect(ns: NS, searchHost: string, logger = new Logger(ns)) {
     const currentServer = ns.getCurrentServer();
     const chain = recursivelyFindHost(ns, currentServer, searchHost);

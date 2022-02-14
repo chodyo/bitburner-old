@@ -1,5 +1,12 @@
 import { NS } from "Bitburner";
-import { joinFactionWithAugsToBuy, factionPort, getEnoughRep, buyAugs, buyNeuroFluxGovernor, installAugs } from "/lib/Faction";
+import {
+    joinFactionWithAugsToBuy,
+    factionPort,
+    getEnoughRep,
+    buyAugs,
+    buyNeuroFluxGovernor,
+    installAugs,
+} from "/lib/Faction";
 import { Logger } from "/lib/Logger";
 
 export async function main(ns: NS) {
@@ -36,10 +43,25 @@ export async function main(ns: NS) {
 
 function progressState(ns: NS, state: string) {
     const logger = new Logger(ns);
-    const msg = JSON.stringify({"done":state});
+    const msg = JSON.stringify({ done: state, next: nextState(state) });
     if (ns.getPortHandle(factionPort).tryWrite(msg)) {
-        logger.info("successfully reported state completion", state);
+        logger.info("successfully reported state completion", msg);
         return;
     }
-    logger.toast(`failed to update state completion state=${state} port=${factionPort}`, "error")
+    logger.toast(`failed to update state completion ${msg} port=${factionPort}`, "error");
+}
+
+function nextState(state: string) {
+    switch (state) {
+        case "joinFaction":
+            return "getRep";
+        case "getRep":
+            return "buyAugs";
+        case "buyAugs":
+            return "buyNeuroFluxGovernor";
+        case "buyNeuroFluxGovernor":
+            return "installAugs";
+        case "installAugs":
+            return "exit";
+    }
 }

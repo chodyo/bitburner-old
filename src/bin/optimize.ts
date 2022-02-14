@@ -13,11 +13,11 @@ export async function main(ns: NS) {
 
     const scripts = [
         { name: "/bin/startHack.js", active: true },
-        { name: "/bin/darkweb.js", active: false }, // i have everything for now
-        { name: "/bin/hacknet.js", active: false }, // i'm saving money
+        { name: "/bin/darkweb.js", active: true },
+        { name: "/bin/hacknet.js", active: true },
         { name: "/bin/contracts.js", active: true },
-        { name: "/bin/home.js", active: false }, // i'm saving money
-        { name: "/bin/pserv.js", active: false }, // i'm saving money
+        { name: "/bin/home.js", active: true },
+        { name: "/bin/pserv.js", active: true },
         {
             name: "/bin/faction.js",
             active: true,

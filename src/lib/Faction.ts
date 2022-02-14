@@ -263,7 +263,7 @@ async function induceFactionInvite(ns: NS) {
         // Install a backdoor on the CSEC server
         case Factions.CyberSec: {
             const hostname = "CSEC";
-            if (await backdoor(ns, hostname)) {
+            if (ns.getHackingLevel() >= 59 && (await backdoor(ns, hostname))) {
                 logger.toast(`backdoored ${hostname}`);
             }
             break;

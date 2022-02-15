@@ -1,8 +1,8 @@
 import { NS } from "Bitburner";
 import { Logger } from "/lib/Logger";
 import { connect } from "/lib/Connect";
-import { gainRootAccess } from "lib/Root";
-import { sendControlMsg } from "./Optimize";
+import { gainRootAccess } from "/lib/Root";
+import { sendControlMsg } from "/lib/Optimize";
 
 const infinitelyUpgradableAug = "NeuroFlux Governor";
 

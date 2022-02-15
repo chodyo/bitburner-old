@@ -56,6 +56,7 @@ function getControlMsg(state: string): ScriptResult {
             break;
         case "saveMoney":
             nextState = "buyAugs";
+            break;
         case "buyAugs":
             nextState = "buyNeuroFluxGovernor";
             break;

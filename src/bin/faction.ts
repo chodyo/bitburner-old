@@ -1,6 +1,13 @@
 import { NS } from "Bitburner";
 import { Logger } from "/lib/Logger";
-import { joinFactionWithAugsToBuy, getEnoughRep, buyAugs, buyNeuroFluxGovernor, installAugs } from "/lib/Faction";
+import {
+    joinFactionWithAugsToBuy,
+    getEnoughRep,
+    saveMoney,
+    buyAugs,
+    buyNeuroFluxGovernor,
+    installAugs,
+} from "/lib/Faction";
 import { ScriptResult, sendControlMsg } from "/lib/Optimize";
 
 export async function main(ns: NS) {
@@ -17,6 +24,9 @@ export async function main(ns: NS) {
             break;
         case "getRep":
             if (getEnoughRep(ns)) sendControlMsg(ns, getControlMsg(state));
+            break;
+        case "saveMoney":
+            if (saveMoney(ns)) sendControlMsg(ns, getControlMsg(state));
             break;
         case "buyAugs":
             if (buyAugs(ns)) sendControlMsg(ns, getControlMsg(state));
@@ -42,8 +52,10 @@ function getControlMsg(state: string): ScriptResult {
             nextState = "getRep";
             break;
         case "getRep":
-            nextState = "buyAugs";
+            nextState = "saveMoney";
             break;
+        case "saveMoney":
+            nextState = "buyAugs";
         case "buyAugs":
             nextState = "buyNeuroFluxGovernor";
             break;

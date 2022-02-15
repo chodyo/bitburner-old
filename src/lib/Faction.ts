@@ -2,6 +2,7 @@ import { NS } from "Bitburner";
 import { Logger } from "/lib/Logger";
 import { connect } from "/lib/Connect";
 import { gainRootAccess } from "lib/Root";
+import { sendControlMsg } from "./Optimize";
 
 const infinitelyUpgradableAug = "NeuroFlux Governor";
 
@@ -146,6 +147,14 @@ function decideWhoToHackFor(
     return undefined;
 }
 
+export function saveMoney(ns: NS) {
+    const scriptsThatCostMeMoney = ["/bin/darkweb.js", "/bin/hacknet.js", "/bin/home.js", "/bin/pserv.js"];
+    scriptsThatCostMeMoney
+        .map((script) => ({ script: script, done: "saveMoney", next: "exit" }))
+        .forEach((msg) => sendControlMsg(ns, msg));
+    return true;
+}
+
 /**
  * By the time we get to this func, we already have enough rep for everything
  */
@@ -166,19 +175,6 @@ export function buyAugs(ns: NS) {
     if (augs.length === 0) {
         return true;
     }
-
-    // save money
-    // if (augs[0].price > ns.getServerMoneyAvailable("home")) {
-    //     // todo: maybe come up with a better way of doing this
-    //     const scriptsThatCostMeMoney = ["/bin/optimize.js", "/lib/Home.js", "/lib/Pserv.js", "/lib/Hacknet.js"];
-    //     const home = "home";
-    //     scriptsThatCostMeMoney
-    //         .filter((filename) => ns.scriptRunning(filename, home))
-    //         .forEach((filename) => {
-    //             logger.toast(`shutting down ${filename} to conserve money`);
-    //             ns.scriptKill(filename, home);
-    //         });
-    // }
 
     // buy
     while (augs.length > 0 && augs[0] && ns.getAugmentationPrice(augs[0].name) <= ns.getServerMoneyAvailable("home")) {

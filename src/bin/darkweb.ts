@@ -1,6 +1,7 @@
 import { NS } from "Bitburner";
 import { Logger } from "/lib/Logger";
 import { desiredSavings } from "/lib/Money";
+import { sendControlMsg } from "/lib/Optimize";
 
 const darkwebUpgrades = [
     { name: "BruteSSH.exe", cost: 500e3, keepSavings: false },
@@ -25,9 +26,7 @@ export async function main(ns: NS) {
     }
 
     logger.toast("done buying darkweb items", "info");
-
-    // let optimize know not to start it again
-    logger.info("exit 0");
+    sendControlMsg(ns, { script: "/bin/darkweb.js", done: "", next: "exit" });
 }
 
 /**

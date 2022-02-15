@@ -1,15 +1,14 @@
 import { NS } from "Bitburner";
 import { Logger } from "lib/Logger";
 import { hacknetUpgradable, buyHacknetUpgrade } from "/lib/Hacknet";
+import { sendControlMsg } from "/lib/Optimize";
 
 export async function main(ns: NS) {
     const logger = new Logger(ns);
 
     if (!hacknetUpgradable(ns)) {
         logger.toast("done buying hacknet upgrades", "info");
-
-        // let optimize know not to start it again
-        logger.info("exit 0");
+        sendControlMsg(ns, { script: "/bin/hacknet.js", done: "", next: "exit" });
         return;
     }
 

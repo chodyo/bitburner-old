@@ -2,15 +2,14 @@ import { NS } from "Bitburner";
 import { Logger } from "/lib/Logger";
 import { $, desiredSavings } from "/lib/Money";
 import { GB } from "/lib/Mem";
+import { sendControlMsg } from "/lib/Optimize";
 
 export async function main(ns: NS) {
     const logger = new Logger(ns);
 
     if (!pservUpgradable(ns)) {
         logger.toast("done buying pserv upgrades", "info");
-
-        // let optimize know not to start it again
-        logger.info("exit 0");
+        sendControlMsg(ns, { script: "/bin/pserv.js", done: "", next: "exit" });
         return;
     }
 

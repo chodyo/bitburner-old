@@ -1,15 +1,14 @@
 import { NS } from "Bitburner";
 import { Logger } from "/lib/Logger";
 import { desiredSavings } from "/lib/Money";
+import { sendControlMsg } from "/lib/Optimize";
 
 export async function main(ns: NS) {
     const logger = new Logger(ns);
 
     if (!homeUpgradable(ns)) {
         logger.toast("done buying home upgrades", "info");
-
-        // let optimize know not to start it again
-        logger.info("exit 0");
+        sendControlMsg(ns, { script: "/bin/home.js", done: "", next: "exit" });
         return;
     }
 

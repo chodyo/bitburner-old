@@ -2,7 +2,6 @@ import { NS } from "Bitburner";
 import { Logger } from "/lib/Logger";
 import { connect } from "/lib/Connect";
 import { gainRootAccess } from "/lib/Root";
-import { sendControlMsg } from "/lib/Optimize";
 
 const infinitelyUpgradableAug = "NeuroFlux Governor";
 
@@ -147,11 +146,7 @@ function decideWhoToHackFor(
     return undefined;
 }
 
-export function saveMoney(ns: NS) {
-    const scriptsThatCostMeMoney = ["/bin/darkweb.js", "/bin/hacknet.js", "/bin/home.js", "/bin/pserv.js"];
-    scriptsThatCostMeMoney
-        .map((script) => ({ script: script, done: "saveMoney", next: "exit" }))
-        .forEach((msg) => sendControlMsg(ns, msg));
+export function saveMoney(_: NS) {
     return true;
 }
 

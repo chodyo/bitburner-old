@@ -2,6 +2,8 @@ import { NS } from "Bitburner";
 import { Logger } from "/lib/Logger";
 import { controlPort, ScriptResult } from "/lib/Optimize";
 
+const scriptsThatCostMeMoney = ["/bin/darkweb.js", "/bin/hacknet.js", "/bin/home.js", "/bin/pserv.js"];
+
 export async function main(ns: NS) {
     const logger = new Logger(ns);
     logger.trace("starting");
@@ -33,6 +35,14 @@ export async function main(ns: NS) {
                 logger.trace("control msg", controlMsg);
                 if (controlMsg.next === "exit") scripts[i].active = false;
                 else scripts[i].active = true;
+
+                if (controlMsg.done === "saveMoney") {
+                    scripts
+                        .filter((script) => scriptsThatCostMeMoney.includes(script.name))
+                        .forEach((script) => {
+                            script.active = false;
+                        });
+                }
 
                 if (controlMsg.next && script.args && script.args.length > 0)
                     scripts[i].args = [script.args[0], controlMsg.next];

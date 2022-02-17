@@ -1,6 +1,6 @@
 import { NS } from "Bitburner";
-import { hasSourceFile } from "/lib/SourceFiles";
 import { Logger } from "/lib/Logger";
+import { hasSourceFile } from "/lib/SourceFiles";
 
 export async function main(ns: NS) {
     const hostname = ns.args[0].toString();

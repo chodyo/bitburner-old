@@ -1,37 +1,35 @@
+// todo: make these also able to handle non-focus
+
 export function workingRepTotal() {
     return workingRepCurrent() + workingRepEarned();
 }
 
 export function workingRepCurrent() {
-    const currentIdx = 0;
-    return workingRep(currentIdx);
+    const match = document.body.textContent?.match(/Current (Company|Faction) Reputation: ([0-9\\.kmbt]*)/);
+    if (!match || match.length < 2) return 0;
+    return parseNumberWithSuffix(match[2]);
 }
 
 export function workingRepEarned() {
-    const earnedIdx = 1;
-    return workingRep(earnedIdx);
+    return workingEarnedRate()[0];
 }
 
 export function workingRepRate() {
-    const rateIdx = 2;
-    return workingRep(rateIdx);
+    return workingEarnedRate()[1];
 }
 
-function workingRep(i: number): number {
-    const elements = document.getElementsByClassName("jss17465");
-    if (elements.length === 0 || !elements[i]) return 0;
-
-    const text = elements[i].innerHTML;
-    return parseNumberWithSuffix(text);
+function workingEarnedRate() {
+    const regex =
+        /You have earned: .*? ([0-9\\.kmbt]*) \(([0-9\\.kmbt]*) \/ sec\) reputation for this (company|faction)/;
+    const match = document.body.textContent?.match(regex);
+    if (!match || match.length < 4) return [0, 0];
+    return [parseNumberWithSuffix(match[1]), parseNumberWithSuffix(match[2])];
 }
 
 function parseNumberWithSuffix(x: string): number {
     if (x.length === 0) return 0;
 
-    const n = parseInt(x);
-    if (!isNaN(n)) return n;
-
-    const numberPart = parseInt(x.slice(0, x.length - 1));
+    const numberPart = parseFloat(x.slice(0, x.length - 1));
     const suffix = x.charAt(x.length - 1);
     let multiplier = 1;
     switch (suffix) {
@@ -48,7 +46,7 @@ function parseNumberWithSuffix(x: string): number {
             multiplier = 1e12;
             break;
         default:
-            return parseInt(x);
+            return parseFloat(x);
     }
     return numberPart * multiplier;
 }

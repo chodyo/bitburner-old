@@ -2,7 +2,7 @@ import { NS } from "Bitburner";
 import { Logger } from "/lib/Logger";
 import { connect } from "/lib/Connect";
 import { gainRootAccess } from "/lib/Root";
-import { workingRepTotal } from "/lib/Document";
+import { workingRepCurrent, workingRepEarned, workingRepRate, workingRepTotal } from "/lib/Document";
 
 const infinitelyUpgradableAug = "NeuroFlux Governor";
 
@@ -15,11 +15,22 @@ export async function main(ns: NS) {
     logger.info("augs", augs);
 
     logger.info("factions", Factions.values());
+
+    logger.info("working rep vals", workingRepTotal(), workingRepCurrent(), workingRepEarned(), workingRepRate());
 }
 
 type Faction = {
+    // the in-game name of the faction including spaces and punctuation
     name: string;
+
+    // the name of the server that must be backdoored to induce an invite
     backdoorHostname?: string;
+
+    // the city the player must be in to induce an invite
+    city?: string;
+
+    // the amount of corporation rep required to induce a faction invite
+    corp?: number;
 };
 
 abstract class Factions {
@@ -39,9 +50,13 @@ abstract class Factions {
     }
 
     async induceInvite(ns: NS): Promise<boolean> {
-        if (this.value.backdoorHostname) return this.backdoor(ns);
+        let ready = false;
 
-        return false;
+        if (this.value.backdoorHostname) ready = ready && (await this.backdoor(ns));
+        if (this.value.city) ready = ready && ns.travelToCity(this.value.city);
+        if (this.value.corp) workForCorp(ns, this.value.name);
+
+        return ready;
     }
 
     private async backdoor(ns: NS): Promise<boolean> {
@@ -71,7 +86,7 @@ abstract class Factions {
 
 class EarlyGameFactions extends Factions {
     static readonly CyberSec = new EarlyGameFactions("CyberSec", { name: "CyberSec", backdoorHostname: "CSEC" });
-    static readonly TianDiHui = new EarlyGameFactions("TianDiHui", { name: "Tian Di Hui" });
+    static readonly TianDiHui = new EarlyGameFactions("TianDiHui", { name: "Tian Di Hui", city: "Chongqing" });
     static readonly Netburners = new EarlyGameFactions("Netburners", { name: "Netburners" });
 
     // private to disallow creating other instances of this type
@@ -85,12 +100,12 @@ class EarlyGameFactions extends Factions {
 }
 
 class CityFactions extends Factions {
-    static readonly Sector12 = new CityFactions("Sector12", { name: "Sector-12" });
-    static readonly Chongqing = new CityFactions("Chongqing", { name: "Chongqing" });
-    static readonly NewTokyo = new CityFactions("NewTokyo", { name: "New Tokyo" });
-    static readonly Ishima = new CityFactions("Ishima", { name: "Ishima" });
-    static readonly Aevum = new CityFactions("Aevum", { name: "Aevum" });
-    static readonly Volhaven = new CityFactions("Volhaven", { name: "Volhaven" });
+    static readonly Sector12 = new CityFactions("Sector12", { name: "Sector-12", city: "Sector-12" });
+    static readonly Chongqing = new CityFactions("Chongqing", { name: "Chongqing", city: "Chongqing" });
+    static readonly NewTokyo = new CityFactions("NewTokyo", { name: "New Tokyo", city: "New Tokyo" });
+    static readonly Ishima = new CityFactions("Ishima", { name: "Ishima", city: "Ishima" });
+    static readonly Aevum = new CityFactions("Aevum", { name: "Aevum", city: "Aevum" });
+    static readonly Volhaven = new CityFactions("Volhaven", { name: "Volhaven", city: "Volhaven" });
 
     // private to disallow creating other instances of this type
     private constructor(readonly key: string, readonly value: Faction) {
@@ -124,16 +139,20 @@ class HackingGroups extends Factions {
 }
 
 class Megacorporations extends Factions {
-    static readonly ECorp = new Megacorporations("ECorp", { name: "ECorp" });
-    static readonly MegaCorp = new Megacorporations("MegaCorp", { name: "MegaCorp" });
-    static readonly KuaiGong = new Megacorporations("KuaiGong", { name: "KuaiGong International" });
-    static readonly FourSigma = new Megacorporations("FourSigma", { name: "Four Sigma" });
-    static readonly NWO = new Megacorporations("NWO", { name: "NWO" });
-    static readonly Blade = new Megacorporations("Blade", { name: "Blade Industries" });
-    static readonly OmniTek = new Megacorporations("OmniTek", { name: "OmniTek Incorporated" });
-    static readonly Bachman = new Megacorporations("Bachman", { name: "Bachman & Associates" });
-    static readonly Clarke = new Megacorporations("Clarke", { name: "Clarke Incorporated" });
-    static readonly Fulcrum = new Megacorporations("Fulcrum", { name: "Fulcrum Secret Technologies" });
+    static readonly ECorp = new Megacorporations("ECorp", { name: "ECorp", corp: 200e3 });
+    static readonly MegaCorp = new Megacorporations("MegaCorp", { name: "MegaCorp", corp: 200e3 });
+    static readonly KuaiGong = new Megacorporations("KuaiGong", { name: "KuaiGong International", corp: 200e3 });
+    static readonly FourSigma = new Megacorporations("FourSigma", { name: "Four Sigma", corp: 200e3 });
+    static readonly NWO = new Megacorporations("NWO", { name: "NWO", corp: 200e3 });
+    static readonly Blade = new Megacorporations("Blade", { name: "Blade Industries", corp: 200e3 });
+    static readonly OmniTek = new Megacorporations("OmniTek", { name: "OmniTek Incorporated", corp: 200e3 });
+    static readonly Bachman = new Megacorporations("Bachman", { name: "Bachman & Associates", corp: 200e3 });
+    static readonly Clarke = new Megacorporations("Clarke", { name: "Clarke Incorporated", corp: 200e3 });
+    static readonly Fulcrum = new Megacorporations("Fulcrum", {
+        name: "Fulcrum Secret Technologies",
+        corp: 250e3,
+        backdoorHostname: "fulcrumassets",
+    });
 
     // private to disallow creating other instances of this type
     private constructor(readonly key: string, readonly value: Faction) {
@@ -204,6 +223,7 @@ export async function joinFactionWithAugsToBuy(ns: NS) {
 export function getEnoughRep(ns: NS) {
     const logger = new Logger(ns);
 
+    // highest rep requirement of all augs for all factions i've already joined
     const augs = unownedUninstalledAugmentsFromFactions(ns, ...ns.getPlayer().factions)
         .filter((aug) => ns.getFactionRep(aug.faction) < aug.repreq)
         .sort((a, b) => b.repreq - a.repreq);
@@ -212,91 +232,75 @@ export function getEnoughRep(ns: NS) {
         return true;
     }
 
-    return hackForFaction(ns, augs[0].faction);
+    logger.info("chosen faction", augs[0].faction);
+
+    return hackForFaction(ns, augs[0].faction, augs[0].repreq);
 }
 
-function hackForFaction(ns: NS, factionName: string) {
-    const currentWorkFaction = ns.getPlayer().isWorking ? ns.getPlayer().currentWorkFactionName : undefined;
-    if (currentWorkFaction && currentWorkFaction !== augGoal.faction) {
-        ns.stopAction();
-        logger.toast(`stopped working at ${currentWorkFaction} to work at ${augGoal.faction} instead`);
-    }
+// // todo: make this better
+// function decideWhoToHackFor(
+//     ns: NS,
+//     augs: { faction: string; name: string; repreq: number; prereqs: string[]; price: number }[]
+// ) {
+//     const logger = new Logger(ns);
 
-    // Occasionally randomly stop working
-    // to allow the accumulated rep to be added to the totals and refocus
-    if (Math.random() > 0.9) ns.stopAction();
+//     const corporations = [
+//         "ecorp",
+//         "megacorp",
+//         "kuaigong international",
+//         "four sigma",
+//         "nwo",
+//         "blade industries",
+//         "omnitek incorporated",
+//         "bachman & associates",
+//         "clarke incorporated",
+//         "fulcrum secret technologies",
+//     ];
 
-    if (!ns.getPlayer().isWorking && !ns.workForFaction(augGoal.faction, "hacking")) {
-        throw new Error(`failed to start work to gain rep for aug=${JSON.stringify(augGoal)}`);
-    }
+//     const goodFirstBuys = [
+//         "Neurotrainer III", // 130m
+//         "Power Recirculation Core", // 180m
+//         "ADR-V2 Pheromone Gene", // 550m
+//         "FocusWire", // 900m
+//         "Neuronal Densification", // 1.375b
+//         "nextSENS Gene Modification", // 1.925b
+//         "HyperSight Corneal Implant", // 2.75b
+//         "SmartJaw", // 2.75b
+//         "OmniTek InfoLoad", // 2.875b
+//         "Xanipher", // 4.25b
+//         "PC Direct-Neural Interface NeuroNet Injector", // 7.5b
+//     ].map((s) => s.toLowerCase());
 
-    //! todo:
-}
+//     // const num = (s: string) =>
+//     //     Number(s.replace("k", "000").replace("m", "000000").replace("b", "000000000").replace("t", "000000000000"));
 
-// todo: make this better
-function decideWhoToHackFor(
-    ns: NS,
-    augs: { faction: string; name: string; repreq: number; prereqs: string[]; price: number }[]
-) {
-    const logger = new Logger(ns);
+//     logger.info("augs", augs);
+//     const corpsOnly = augs.filter((aug) => corporations.includes(aug.faction.toLowerCase()));
+//     logger.info("corp augs", corpsOnly);
+//     const firstAugsOnly = corpsOnly.filter((aug) => goodFirstBuys.includes(aug.name.toLowerCase()));
+//     logger.info("first augs", firstAugsOnly);
+//     firstAugsOnly.forEach((aug) =>
+//         logger.info(
+//             "favor",
+//             ns.getFactionFavor(aug.faction),
+//             ns.getFactionFavorGain(aug.faction),
+//             150 > ns.getFactionFavor(aug.faction) + ns.getFactionFavorGain(aug.faction),
+//             aug
+//         )
+//     );
+//     const noDonos = firstAugsOnly.filter(
+//         // unlock donations at 150 favor
+//         (aug) => 150 > ns.getFactionFavor(aug.faction) + ns.getFactionFavorGain(aug.faction)
+//     );
+//     logger.info("nodonos", noDonos);
+//     const sorted = noDonos.sort((a, b) => a.repreq - b.repreq);
 
-    const corporations = [
-        "ecorp",
-        "megacorp",
-        "kuaigong international",
-        "four sigma",
-        "nwo",
-        "blade industries",
-        "omnitek incorporated",
-        "bachman & associates",
-        "clarke incorporated",
-        "fulcrum secret technologies",
-    ];
+//     if (sorted.length > 0) {
+//         return sorted[0];
+//     }
 
-    const goodFirstBuys = [
-        "Neurotrainer III", // 130m
-        "Power Recirculation Core", // 180m
-        "ADR-V2 Pheromone Gene", // 550m
-        "FocusWire", // 900m
-        "Neuronal Densification", // 1.375b
-        "nextSENS Gene Modification", // 1.925b
-        "HyperSight Corneal Implant", // 2.75b
-        "SmartJaw", // 2.75b
-        "OmniTek InfoLoad", // 2.875b
-        "Xanipher", // 4.25b
-        "PC Direct-Neural Interface NeuroNet Injector", // 7.5b
-    ].map((s) => s.toLowerCase());
-
-    // const num = (s: string) =>
-    //     Number(s.replace("k", "000").replace("m", "000000").replace("b", "000000000").replace("t", "000000000000"));
-
-    logger.info("augs", augs);
-    const corpsOnly = augs.filter((aug) => corporations.includes(aug.faction.toLowerCase()));
-    logger.info("corp augs", corpsOnly);
-    const firstAugsOnly = corpsOnly.filter((aug) => goodFirstBuys.includes(aug.name.toLowerCase()));
-    logger.info("first augs", firstAugsOnly);
-    firstAugsOnly.forEach((aug) =>
-        logger.info(
-            "favor",
-            ns.getFactionFavor(aug.faction),
-            ns.getFactionFavorGain(aug.faction),
-            150 > ns.getFactionFavor(aug.faction) + ns.getFactionFavorGain(aug.faction),
-            aug
-        )
-    );
-    const noDonos = firstAugsOnly.filter(
-        // unlock donations at 150 favor
-        (aug) => 150 > ns.getFactionFavor(aug.faction) + ns.getFactionFavorGain(aug.faction)
-    );
-    logger.info("nodonos", noDonos);
-    const sorted = noDonos.sort((a, b) => a.repreq - b.repreq);
-
-    if (sorted.length > 0) {
-        return sorted[0];
-    }
-
-    return undefined;
-}
+//     return undefined;
+// }
 
 export function saveMoney(_: NS) {
     return true;
@@ -500,7 +504,23 @@ async function induceFactionInvite(ns: NS) {
     // }
 }
 
+function hackForFaction(ns: NS, factionName: string, repThreshold: number) {
+    if (ns.getFactionRep(factionName) >= repThreshold) return true;
+
+    const currentFactionName = ns.getPlayer().currentWorkFactionName;
+    if (!currentFactionName || currentFactionName !== factionName) ns.workForFaction(factionName, "hacking");
+
+    if (workingRepTotal() >= repThreshold) {
+        ns.stopAction();
+        return true;
+    }
+
+    return false;
+}
+
 function workForCorp(ns: NS, corpName: string) {
-    const rep = workingRepTotal();
+    ns.applyToCompany(corpName, "Software");
+    if (ns.getPlayer().companyName !== corpName) throw new Error(`unable to get job at ${corpName}`);
+    // todo: this sux
     ns.workForCompany(corpName);
 }

@@ -25,13 +25,16 @@ export async function main(ns: NS) {
         .map((hostname) => ({
             hostname: hostname,
 
-            maxMoney: ns.getServerMaxMoney(hostname),
-            money: ns.getServerMoneyAvailable(hostname),
+            get maxMoney() {return ns.getServerMaxMoney(this.hostname)},
+            get money(){ return ns.getServerMoneyAvailable(this.hostname)},
 
-            minSecurity: ns.getServerMinSecurityLevel(hostname),
-            security: ns.getServerSecurityLevel(hostname),
+            get minSecurity() { return ns.getServerMinSecurityLevel(this.hostname);},
+            get security() { return ns.getServerSecurityLevel(this.hostname);},
 
-            hackChance: ns.hackAnalyzeChance(hostname),
+            get hackChance() { return ns.hackAnalyzeChance(this.hostname);},
+            get hackTime() { return ns.getHackTime(this.hostname) / 1000;},
+
+            get rate() {return this.maxMoney * this.hackChance / this.hackTime;}
         }));
 
     if (potentialTargets.length === 0) return;
@@ -39,7 +42,7 @@ export async function main(ns: NS) {
     const target = potentialTargets
         // super basic, just choose target to be the one with the highest max money
         // this could probably be optimized to take into account other factors but idk how to do that yet
-        .reduce((prevHost, currHost) => (prevHost.maxMoney > currHost.maxMoney ? prevHost : currHost));
+        .reduce((prevHost, currHost) => (prevHost.rate > currHost.rate ? prevHost : currHost));
 
     // calculate state by the time hack/grow/weaken would complete
 

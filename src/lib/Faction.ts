@@ -2,7 +2,7 @@ import { NS } from "Bitburner";
 import { Logger } from "/lib/Logger";
 import { connect } from "/lib/Connect";
 import { gainRootAccess } from "/lib/Root";
-import { workingRepEarned, workingRepRate } from "/lib/Document";
+// import { workingRepEarned, workingRepRate } from "/lib/Document";
 
 const infinitelyUpgradableAug = "NeuroFlux Governor";
 
@@ -16,7 +16,8 @@ export async function main(ns: NS) {
 
     logger.info("factions", Factions.values());
 
-    logger.info("working rep vals", workingRepEarned(), workingRepRate());
+    // logger.info("working rep vals", workingRepEarned(), workingRepRate());
+    logger.info("working rep vals", ns.getPlayer().workRepGained, ns.getPlayer().workRepGainRate);
 }
 
 type Faction = {
@@ -322,7 +323,8 @@ function hackForFaction(ns: NS, factionName: string, repThreshold: number) {
     const currentFactionName = ns.getPlayer().currentWorkFactionName;
     if (!currentFactionName || currentFactionName !== factionName) ns.workForFaction(factionName, "hacking");
 
-    const earned = workingRepEarned();
+    // const earned = workingRepEarned();
+    const earned = ns.getPlayer().workRepGained;
 
     if (current + earned >= repThreshold) {
         ns.stopAction();

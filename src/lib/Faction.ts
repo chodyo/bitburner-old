@@ -2,7 +2,7 @@ import { NS } from "Bitburner";
 import { Logger } from "/lib/Logger";
 import { connect } from "/lib/Connect";
 import { gainRootAccess } from "/lib/Root";
-import { workingRepCurrent, workingRepEarned, workingRepRate, workingRepTotal } from "/lib/Document";
+import { workingRepEarned, workingRepRate } from "/lib/Document";
 
 const infinitelyUpgradableAug = "NeuroFlux Governor";
 
@@ -16,7 +16,7 @@ export async function main(ns: NS) {
 
     logger.info("factions", Factions.values());
 
-    logger.info("working rep vals", workingRepTotal(), workingRepCurrent(), workingRepEarned(), workingRepRate());
+    logger.info("working rep vals", workingRepEarned(), workingRepRate());
 }
 
 type Faction = {
@@ -174,42 +174,6 @@ class Megacorporations extends Factions {
     }
 }
 
-// enum EarlyGameFactions {
-//     CyberSec = "CyberSec",
-//     TianDiHui = "Tian Di Hui",
-//     Netburners = "Netburners",
-// }
-
-// enum Factions {
-//     Sector12 = "Sector-12",
-//     Chongqing = "Chongqing",
-//     NewTokyo = "New Tokyo",
-//     Ishima = "Ishima",
-//     Aevum = "Aevum",
-//     Volhaven = "Volhaven",
-
-//     NiteSec = "NiteSec",
-//     TheBlackHand = "The Black Hand",
-//     BitRunners = "BitRunners",
-
-//     TheCovenant = "The Covenant",
-//     Daedalus = "Daedalus",
-//     Illuminati = "Illuminati",
-// }
-
-// enum Megacorporations {
-//     ECorp = "ECorp",
-//     MegaCorp = "MegaCorp",
-//     KuaiGong = "KuaiGong International",
-//     FourSigma = "Four Sigma",
-//     NWO = "NWO",
-//     Blade = "Blade Industries",
-//     OmniTek = "OmniTek Incorporated",
-//     Bachman = "Bachman & Associates",
-//     Clarke = "Clarke Incorporated",
-//     Fulcrum = "Fulcrum Secret Technologies",
-// }
-
 export async function joinFactionWithAugsToBuy(ns: NS) {
     const augsAvailableFromJoinedFactions = unownedUninstalledAugmentsFromFactions(ns, ...ns.getPlayer().factions);
     if (augsAvailableFromJoinedFactions.length > 0) {
@@ -246,71 +210,6 @@ export function getEnoughRep(ns: NS) {
 
     return hackForFaction(ns, augs[0].faction, augs[0].repreq);
 }
-
-// // todo: make this better
-// function decideWhoToHackFor(
-//     ns: NS,
-//     augs: { faction: string; name: string; repreq: number; prereqs: string[]; price: number }[]
-// ) {
-//     const logger = new Logger(ns);
-
-//     const corporations = [
-//         "ecorp",
-//         "megacorp",
-//         "kuaigong international",
-//         "four sigma",
-//         "nwo",
-//         "blade industries",
-//         "omnitek incorporated",
-//         "bachman & associates",
-//         "clarke incorporated",
-//         "fulcrum secret technologies",
-//     ];
-
-//     const goodFirstBuys = [
-//         "Neurotrainer III", // 130m
-//         "Power Recirculation Core", // 180m
-//         "ADR-V2 Pheromone Gene", // 550m
-//         "FocusWire", // 900m
-//         "Neuronal Densification", // 1.375b
-//         "nextSENS Gene Modification", // 1.925b
-//         "HyperSight Corneal Implant", // 2.75b
-//         "SmartJaw", // 2.75b
-//         "OmniTek InfoLoad", // 2.875b
-//         "Xanipher", // 4.25b
-//         "PC Direct-Neural Interface NeuroNet Injector", // 7.5b
-//     ].map((s) => s.toLowerCase());
-
-//     // const num = (s: string) =>
-//     //     Number(s.replace("k", "000").replace("m", "000000").replace("b", "000000000").replace("t", "000000000000"));
-
-//     logger.info("augs", augs);
-//     const corpsOnly = augs.filter((aug) => corporations.includes(aug.faction.toLowerCase()));
-//     logger.info("corp augs", corpsOnly);
-//     const firstAugsOnly = corpsOnly.filter((aug) => goodFirstBuys.includes(aug.name.toLowerCase()));
-//     logger.info("first augs", firstAugsOnly);
-//     firstAugsOnly.forEach((aug) =>
-//         logger.info(
-//             "favor",
-//             ns.getFactionFavor(aug.faction),
-//             ns.getFactionFavorGain(aug.faction),
-//             150 > ns.getFactionFavor(aug.faction) + ns.getFactionFavorGain(aug.faction),
-//             aug
-//         )
-//     );
-//     const noDonos = firstAugsOnly.filter(
-//         // unlock donations at 150 favor
-//         (aug) => 150 > ns.getFactionFavor(aug.faction) + ns.getFactionFavorGain(aug.faction)
-//     );
-//     logger.info("nodonos", noDonos);
-//     const sorted = noDonos.sort((a, b) => a.repreq - b.repreq);
-
-//     if (sorted.length > 0) {
-//         return sorted[0];
-//     }
-
-//     return undefined;
-// }
 
 export function saveMoney(_: NS) {
     return true;
@@ -397,7 +296,6 @@ function unownedUninstalledAugmentsFromFactions(ns: NS, ...factions: string[]) {
                 price: ns.getAugmentationPrice(aug),
             }))
         )
-        .filter((aug) => !!aug) // just to be safe - for some reason game is crashing on `x.name` where x==undefined
         .filter((aug) => !playerAugs.includes(aug.name))
         .filter((aug) => aug.name !== infinitelyUpgradableAug);
 }
@@ -415,108 +313,18 @@ async function induceFactionInvite(ns: NS) {
     const f: Factions = Factions.from(augs[0].faction);
     logger.info(`inducing faction invite with ${f}`);
     await f.induceInvite(ns);
-
-    // switch (firstFactionWithUnownedAugs) {
-    //     // Install a backdoor on the CSEC server
-    //     case Factions.CyberSec: {
-    //         const hostname = "CSEC";
-    //         if (ns.getHackingLevel() >= 59 && (await backdoor(ns, hostname))) {
-    //             logger.toast(`backdoored ${hostname}`);
-    //         }
-    //         break;
-    //     }
-
-    //     // $1m; Hacking Level 50; Be in Chongqing, New Tokyo, or Ishima
-    //     // Be in Chongqing; $20m
-    //     case Factions.TianDiHui:
-    //     case Factions.Chongqing:
-    //         if (ns.getPlayer().city !== "Chongqing" && ns.travelToCity("Chongqing")) {
-    //             logger.toast(`traveled to Chongqing to try to join ${firstFactionWithUnownedAugs}`);
-    //         }
-    //         break;
-
-    //     // Be in New Tokyo; $20m
-    //     case Factions.NewTokyo:
-    //         if (ns.getPlayer().city !== "New Tokyo" && ns.travelToCity("New Tokyo")) {
-    //             logger.toast("traveled to New Tokyo to try to join New Tokyo");
-    //         }
-    //         break;
-
-    //     // Be in Ishima; $30m
-    //     case Factions.Ishima:
-    //         if (ns.getPlayer().city !== "Ishima" && ns.travelToCity("Ishima")) {
-    //             logger.toast("traveled to Ishima to try to join Ishima");
-    //         }
-    //         break;
-
-    //     // Be in Aevum; $40m
-    //     case Factions.Aevum:
-    //         if (ns.getPlayer().city !== "Aevum" && ns.travelToCity("Aevum")) {
-    //             logger.toast("traveled to Aevum to try to join Aevum");
-    //         }
-    //         break;
-
-    //     // Be in Aevum; $50m
-    //     case Factions.Volhaven:
-    //         if (ns.getPlayer().city !== "Volhaven" && ns.travelToCity("Volhaven")) {
-    //             logger.toast("traveled to Volhaven to try to join Volhaven");
-    //         }
-    //         break;
-
-    //     // Install a backdoor on the avmnite-02h server
-    //     case Factions.NiteSec: {
-    //         const hostname = "avmnite-02h";
-    //         if (await backdoor(ns, hostname)) {
-    //             logger.toast(`backdoored ${hostname}`);
-    //         }
-    //         break;
-    //     }
-
-    //     // Install a backdoor on the I.I.I.I server
-    //     case Factions.TheBlackHand: {
-    //         const hostname = "I.I.I.I";
-    //         if (await backdoor(ns, hostname)) {
-    //             logger.toast(`backdoored ${hostname}`);
-    //         }
-    //         break;
-    //     }
-
-    //     // Install a backdoor on the run4theh111z server
-    //     case Factions.BitRunners: {
-    //         const hostname = "run4theh111z";
-    //         if (await backdoor(ns, hostname)) {
-    //             logger.toast(`backdoored ${hostname}`);
-    //         }
-    //         break;
-    //     }
-
-    //     case Megacorporations.Bachman:
-    //     case Megacorporations.Blade:
-    //     case Megacorporations.Clarke:
-    //     case Megacorporations.ECorp:
-    //     case Megacorporations.FourSigma:
-    //     case Megacorporations.Fulcrum:
-    //     case Megacorporations.KuaiGong:
-    //     case Megacorporations.MegaCorp:
-    //     case Megacorporations.NWO:
-    //     case Megacorporations.OmniTek:
-    //         workForCorp(ns, firstFactionWithUnownedAugs);
-    //         break;
-
-    //     default: {
-    //         logger.warn(`trying to induce invite to ${firstFactionWithUnownedAugs} but not implemented`);
-    //         break;
-    //     }
-    // }
 }
 
 function hackForFaction(ns: NS, factionName: string, repThreshold: number) {
-    if (ns.getFactionRep(factionName) >= repThreshold) return true;
+    const current = ns.getFactionRep(factionName);
+    if (current >= repThreshold) return true;
 
     const currentFactionName = ns.getPlayer().currentWorkFactionName;
     if (!currentFactionName || currentFactionName !== factionName) ns.workForFaction(factionName, "hacking");
 
-    if (workingRepTotal() >= repThreshold) {
+    const earned = workingRepEarned();
+
+    if (current + earned >= repThreshold) {
         ns.stopAction();
         return true;
     }

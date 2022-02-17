@@ -1,17 +1,12 @@
-// todo: make these also able to handle non-focus
-
-export function workingRepTotal() {
-    return workingRepCurrent() + workingRepEarned();
-}
-
-export function workingRepCurrent() {
-    const match = document.body.textContent?.match(/Current (Company|Faction) Reputation: ([0-9\\.kmbt]*)/);
-    if (!match || match.length < 2) return 0;
-    return parseNumberWithSuffix(match[2]);
-}
+// ! 25.00GB | document (dom)
 
 export function workingRepEarned() {
-    return workingEarnedRate()[0];
+    const focused = workingEarnedRate()[0];
+    if (focused) return focused;
+
+    const background = document.body.textContent?.match(/Working for .*\+([0-9\\.kmbt]*)/);
+    if (!background || background.length < 2) return 0;
+    return parseNumberWithSuffix(background[1]);
 }
 
 export function workingRepRate() {
@@ -21,9 +16,9 @@ export function workingRepRate() {
 function workingEarnedRate() {
     const regex =
         /You have earned: .*? ([0-9\\.kmbt]*) \(([0-9\\.kmbt]*) \/ sec\) reputation for this (company|faction)/;
-    const match = document.body.textContent?.match(regex);
-    if (!match || match.length < 4) return [0, 0];
-    return [parseNumberWithSuffix(match[1]), parseNumberWithSuffix(match[2])];
+    const focused = document.body.textContent?.match(regex);
+    if (!focused || focused.length < 4) return [0, 0];
+    return [parseNumberWithSuffix(focused[1]), parseNumberWithSuffix(focused[2])];
 }
 
 function parseNumberWithSuffix(x: string): number {

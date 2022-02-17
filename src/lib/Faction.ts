@@ -11,7 +11,7 @@ export async function main(ns: NS) {
     logger.toast("use /bin/faction.js instead", "info");
 
     logger.info("name", HackingGroups.BitRunners);
-    const augs = unownedUninstalledAugmentsFromFactions(ns, HackingGroups.BitRunners);
+    const augs = unownedUninstalledAugmentsFromFactions(ns, HackingGroups.BitRunners.name);
     logger.info("augs", augs);
 
     logger.info("factions", Factions.values());
@@ -36,11 +36,21 @@ type Faction = {
 abstract class Factions {
     constructor(protected readonly key: string, protected readonly value: Faction) {}
 
+    static from(name: string): Factions {
+        const matches = Factions.values().filter((f) => f.name === name);
+        if (matches.length === 1) return matches[0];
+        throw new Error(`not sure which faction you were looking for: ${name}`);
+    }
+
+    get name(): string {
+        return this.value.name;
+    }
+
     toString(): string {
         return this.value.name;
     }
 
-    static values(): Faction[] {
+    static values(): Factions[] {
         return [
             ...EarlyGameFactions.values(),
             ...CityFactions.values(),
@@ -50,11 +60,11 @@ abstract class Factions {
     }
 
     async induceInvite(ns: NS): Promise<boolean> {
-        let ready = false;
+        let ready = true;
 
-        if (this.value.backdoorHostname) ready = ready && (await this.backdoor(ns));
-        if (this.value.city) ready = ready && ns.travelToCity(this.value.city);
-        if (this.value.corp) workForCorp(ns, this.value.name);
+        if (this.value.backdoorHostname && !(await this.backdoor(ns))) ready = false;
+        if (this.value.city && !ns.travelToCity(this.value.city)) ready = false;
+        if (this.value.corp && !workForCorp(ns, this.value.name)) ready = false;
 
         return ready;
     }
@@ -94,8 +104,8 @@ class EarlyGameFactions extends Factions {
         super(key, value);
     }
 
-    static values(): Faction[] {
-        return Object.values(EarlyGameFactions).map((faction) => faction.value);
+    static values(): Factions[] {
+        return Object.values(EarlyGameFactions);
     }
 }
 
@@ -112,8 +122,8 @@ class CityFactions extends Factions {
         super(key, value);
     }
 
-    static values(): Faction[] {
-        return Object.values(CityFactions).map((faction) => faction.value);
+    static values(): Factions[] {
+        return Object.values(CityFactions);
     }
 }
 
@@ -133,8 +143,8 @@ class HackingGroups extends Factions {
         super(key, value);
     }
 
-    static values(): Faction[] {
-        return Object.values(HackingGroups).map((faction) => faction.value);
+    static values(): Factions[] {
+        return Object.values(HackingGroups);
     }
 }
 
@@ -159,8 +169,8 @@ class Megacorporations extends Factions {
         super(key, value);
     }
 
-    static values(): Faction[] {
-        return Object.values(Megacorporations).map((faction) => faction.value);
+    static values(): Factions[] {
+        return Object.values(Megacorporations);
     }
 }
 
@@ -395,19 +405,15 @@ function unownedUninstalledAugmentsFromFactions(ns: NS, ...factions: string[]) {
 async function induceFactionInvite(ns: NS) {
     const logger = new Logger(ns);
 
-    let firstFactionWithUnownedAugs: string | undefined = undefined;
-    for (const faction of Object.values(Factions)) {
-        if (unownedUninstalledAugmentsFromFactions(ns, faction).length > 0) {
-            firstFactionWithUnownedAugs = faction;
-            break;
-        }
-    }
+    // out of all the highest rep augs by faction, find the lowest rep one
+    const augs = unownedUninstalledAugmentsFromFactions(ns, ...Factions.values().map((f) => f.name))
+        .sort((a, b) => b.repreq - a.repreq)
+        .filter((aug, i, arr) => i === arr.findIndex((v) => v.faction === aug.faction))
+        .sort((a, b) => a.repreq - b.repreq);
 
-    logger.info(`inducing faction invite with ${firstFactionWithUnownedAugs}`);
-
-    if (!firstFactionWithUnownedAugs) return;
-
-    const f: Factions = Factions[firstFactionWithUnownedAugs];
+    if (augs.length === 0) return;
+    const f: Factions = Factions.from(augs[0].faction);
+    logger.info(`inducing faction invite with ${f}`);
     await f.induceInvite(ns);
 
     // switch (firstFactionWithUnownedAugs) {
@@ -523,4 +529,5 @@ function workForCorp(ns: NS, corpName: string) {
     if (ns.getPlayer().companyName !== corpName) throw new Error(`unable to get job at ${corpName}`);
     // todo: this sux
     ns.workForCompany(corpName);
+    return true;
 }

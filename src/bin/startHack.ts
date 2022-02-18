@@ -25,16 +25,30 @@ export async function main(ns: NS) {
         .map((hostname) => ({
             hostname: hostname,
 
-            get maxMoney() {return ns.getServerMaxMoney(this.hostname)},
-            get money(){ return ns.getServerMoneyAvailable(this.hostname)},
+            get maxMoney() {
+                return ns.getServerMaxMoney(this.hostname);
+            },
+            get money() {
+                return ns.getServerMoneyAvailable(this.hostname);
+            },
 
-            get minSecurity() { return ns.getServerMinSecurityLevel(this.hostname);},
-            get security() { return ns.getServerSecurityLevel(this.hostname);},
+            get minSecurity() {
+                return ns.getServerMinSecurityLevel(this.hostname);
+            },
+            get security() {
+                return ns.getServerSecurityLevel(this.hostname);
+            },
 
-            get hackChance() { return ns.hackAnalyzeChance(this.hostname);},
-            get hackTime() { return ns.getHackTime(this.hostname) / 1000;},
+            get hackChance() {
+                return ns.hackAnalyzeChance(this.hostname);
+            },
+            get hackTime() {
+                return ns.getHackTime(this.hostname) / 1000;
+            },
 
-            get rate() {return this.maxMoney * this.hackChance / this.hackTime;}
+            get rate() {
+                return (this.maxMoney * this.hackChance) / this.hackTime;
+            },
         }));
 
     if (potentialTargets.length === 0) return;

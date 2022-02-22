@@ -7,6 +7,7 @@ const scriptsThatCostMeMoney = ["/bin/darkweb.js", "/bin/hacknet.js", "/bin/home
 export async function main(ns: NS) {
     const logger = new Logger(ns);
     logger.trace("starting");
+    logger.toast("reminder that hacknet has the bitnode mult hardcoded to 0.05", "warning");
 
     const controlPortHandle = ns.getPortHandle(controlPort);
 
@@ -31,7 +32,9 @@ export async function main(ns: NS) {
         for (let i in scripts) {
             const script = scripts[i];
 
-            const controlMsg = control.get(script.name);
+            // 2.00GB | stanek.get (fn)
+            // const controlMsg = control.get(script.name);
+            const controlMsg = control["get"](script.name);
             if (controlMsg) {
                 logger.trace("control msg", controlMsg);
                 if (controlMsg.next === "exit") scripts[i].active = false;

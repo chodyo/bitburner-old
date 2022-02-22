@@ -391,7 +391,9 @@ export function findAndFilterContracts(ns: NS, filters: Filters = {}) {
 }
 
 function recursivelyFindContracts(ns: NS, hostname: string, checkedHosts = new Map<string, boolean>()) {
-    if (checkedHosts.get(hostname)) {
+    // 2.00GB | stanek.get (fn)
+    // if (checkedHosts.get(hostname)) {
+    if (checkedHosts["get"](hostname)) {
         return [];
     }
     checkedHosts.set(hostname, true);

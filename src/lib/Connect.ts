@@ -1,6 +1,5 @@
 import { NS } from "Bitburner";
 import { Logger } from "/lib/Logger";
-import { hasSourceFile } from "/lib/SourceFiles";
 
 export async function main(ns: NS) {
     const hostname = ns.args[0].toString();
@@ -20,12 +19,10 @@ export function connect(ns: NS, searchHost: string, logger = new Logger(ns)) {
         return false;
     }
 
-    if (hasSourceFile(ns, 4, 1)) {
-        const connected = chain.slice(1).every((hostname) => ns.connect(hostname));
-        if (!connected) {
-            logger.warn("failed to connect to", searchHost);
-            return false;
-        }
+    const connected = chain.slice(1).every((hostname) => ns.connect(hostname));
+    if (!connected) {
+        logger.warn("failed to connect to", searchHost);
+        return false;
     }
 
     logger.info("host found, connect by", chain.join(" ➡ "));
@@ -33,7 +30,9 @@ export function connect(ns: NS, searchHost: string, logger = new Logger(ns)) {
 }
 
 function recursivelyFindHost(ns: NS, hostname: string, searchHost: string, checkedHosts = new Map<string, boolean>()) {
-    if (checkedHosts.get(hostname)) {
+    // 2.00GB | stanek.get (fn)
+    // if (checkedHosts.get(hostname)) {
+    if (checkedHosts["get"](hostname)) {
         return [];
     }
     checkedHosts.set(hostname, true);

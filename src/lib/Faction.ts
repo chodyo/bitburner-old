@@ -180,8 +180,14 @@ class Megacorporations extends Factions {
 }
 
 export async function joinFactionWithAugsToBuy(ns: NS) {
+    const logger = new Logger(ns);
+
     const augsAvailableFromJoinedFactions = unownedUninstalledAugmentsFromFactions(ns, ...ns.getPlayer().factions);
     if (augsAvailableFromJoinedFactions.length > 0) {
+        logger.trace(
+            `${augsAvailableFromJoinedFactions.length} augs available from faction that i already joined`,
+            new Set(augsAvailableFromJoinedFactions.map((augs) => augs.faction))
+        );
         return true;
     }
 
@@ -190,9 +196,10 @@ export async function joinFactionWithAugsToBuy(ns: NS) {
         ...ns.checkFactionInvitations()
     );
     if (augsAvailableFromInvitedFactions.length > 0) {
-        [...new Set(augsAvailableFromInvitedFactions.map((aug) => aug.faction))].forEach((faction) =>
-            ns.joinFaction(faction)
-        );
+        [...new Set(augsAvailableFromInvitedFactions.map((aug) => aug.faction))].forEach((faction) => {
+            logger.trace("joining", faction);
+            ns.joinFaction(faction);
+        });
         return true;
     }
 
@@ -309,6 +316,7 @@ function unownedUninstalledAugmentsFromFactions(ns: NS, ...factions: string[]) {
 
 async function induceFactionInvite(ns: NS) {
     const logger = new Logger(ns);
+    logger.trace("inducing faction invite");
 
     // out of all the highest rep augs by faction, find the lowest rep one
     const augs = unownedUninstalledAugmentsFromFactions(ns, ...Factions.values().map((f) => f.name))
@@ -316,7 +324,10 @@ async function induceFactionInvite(ns: NS) {
         .filter((aug, i, arr) => i === arr.findIndex((v) => v.faction === aug.faction))
         .sort((a, b) => a.repreq - b.repreq);
 
-    if (augs.length === 0) return;
+    if (augs.length === 0) {
+        logger.trace("no augs available in any factions");
+        return;
+    }
     const f: Factions = Factions.from(augs[0].faction);
     logger.info(`inducing faction invite with ${f}`);
     await f.induceInvite(ns);

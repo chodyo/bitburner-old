@@ -271,7 +271,9 @@ export function buyNeuroFluxGovernor(ns: NS) {
     }
     const faction = ns.getPlayer().factions[0];
 
-    while (ns.getServerMoneyAvailable("home") >= ns.getAugmentationPrice(infinitelyUpgradableAug)) {
+    const enoughCash = ns.getServerMoneyAvailable("home") >= ns.getAugmentationPrice(infinitelyUpgradableAug);
+    const enoughRep = ns.getAugmentationRepReq(infinitelyUpgradableAug);
+    while (enoughCash && enoughRep) {
         if (!ns.purchaseAugmentation(faction, infinitelyUpgradableAug)) {
             throw new Error(`tried to buy an aug but failed ${faction} ${infinitelyUpgradableAug}`);
         }

@@ -18,6 +18,7 @@ export async function main(ns: NS) {
         { name: "/bin/home.js", active: true },
         { name: "/bin/pserv.js", active: true },
         { name: "/bin/faction.js", active: true, args: ["--state", "joinFaction"] },
+        { name: "/bin/redpill.js", active: true },
     ];
 
     while (scripts.some((script) => script.active)) {

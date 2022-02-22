@@ -55,8 +55,8 @@ class Logger {
         }
     }
 
-    toast(msg: string, variant: "success" | "info" | "warning" | "error" = "success", duration = 5000) {
-        this.ns.toast(msg, variant, duration);
+    toast(msg: string, variant: "success" | "info" | "warning" | "error" = "success", durationMs = 5000) {
+        this.ns.toast(msg, variant, durationMs);
 
         switch (variant) {
             case "error":

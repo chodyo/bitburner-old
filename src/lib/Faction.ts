@@ -32,6 +32,9 @@ type Faction = {
 
     // the amount of corporation rep required to induce a faction invite
     corp?: number;
+
+    // the name of the corporation if it's different from the faction
+    corpName?: string;
 };
 
 abstract class Factions {
@@ -65,7 +68,7 @@ abstract class Factions {
 
         if (this.value.backdoorHostname && !(await this.backdoor(ns))) ready = false;
         if (this.value.city && !ns.travelToCity(this.value.city)) ready = false;
-        if (this.value.corp && !workForCorp(ns, this.value.name)) ready = false;
+        if (this.value.corp && !workForCorp(ns, this.value.corpName || this.value.name, this.value.corp)) ready = false;
 
         return ready;
     }
@@ -161,6 +164,7 @@ class Megacorporations extends Factions {
     static readonly Clarke = new Megacorporations("Clarke", { name: "Clarke Incorporated", corp: 200e3 });
     static readonly Fulcrum = new Megacorporations("Fulcrum", {
         name: "Fulcrum Secret Technologies",
+        corpName: "Fulcrum Technologies",
         corp: 250e3,
         backdoorHostname: "fulcrumassets",
     });
@@ -323,9 +327,7 @@ function hackForFaction(ns: NS, factionName: string, repThreshold: number) {
     const currentFactionName = ns.getPlayer().currentWorkFactionName;
     if (!currentFactionName || currentFactionName !== factionName) ns.workForFaction(factionName, "hacking");
 
-    // const earned = workingRepEarned();
     const earned = ns.getPlayer().workRepGained;
-
     if (current + earned >= repThreshold) {
         ns.stopAction();
         return true;
@@ -334,10 +336,21 @@ function hackForFaction(ns: NS, factionName: string, repThreshold: number) {
     return false;
 }
 
-function workForCorp(ns: NS, corpName: string) {
+function workForCorp(ns: NS, corpName: string, repThreshold: number) {
     ns.applyToCompany(corpName, "Software");
-    if (ns.getPlayer().companyName !== corpName) throw new Error(`unable to get job at ${corpName}`);
-    // todo: this sux
-    ns.workForCompany(corpName);
-    return true;
+    if (ns.getPlayer().companyName !== corpName) return false;
+
+    const current = ns.getCompanyRep(corpName);
+    if (current >= repThreshold) return true;
+
+    const currentWorkName = ns.getPlayer().currentWorkFactionName;
+    if (!currentWorkName || currentWorkName !== corpName) ns.workForCompany(corpName);
+
+    const earned = ns.getPlayer().workRepGained;
+    if (current + 2 * earned >= repThreshold) {
+        ns.stopAction();
+        return true;
+    }
+
+    return false;
 }

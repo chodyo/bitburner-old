@@ -1,6 +1,7 @@
 import { NS } from "Bitburner";
 import { Logger } from "/lib/Logger";
-import { controlPort, ScriptResult } from "/lib/Optimize";
+import { ScriptResult } from "/lib/Optimize";
+import { PortNumbers } from "/lib/PortNumbers";
 
 const scriptsThatCostMeMoney = ["/bin/darkweb.js", "/bin/hacknet.js", "/bin/home.js", "/bin/pserv.js"];
 
@@ -9,7 +10,7 @@ export async function main(ns: NS) {
     logger.trace("starting");
     logger.toast("reminder that hacknet has the bitnode mult hardcoded to 0.05", "warning");
 
-    const controlPortHandle = ns.getPortHandle(controlPort);
+    const controlPortHandle = ns.getPortHandle(PortNumbers.Control);
 
     const scripts = [
         { name: "/bin/startHack.js", active: true },

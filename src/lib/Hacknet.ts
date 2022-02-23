@@ -1,5 +1,6 @@
 import { NS } from "Bitburner";
 import { Logger } from "lib/Logger";
+import { PortNumbers } from "lib/PortNumbers";
 
 const minRoiRecoverySeconds = 30 * 60;
 

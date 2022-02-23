@@ -7,6 +7,7 @@ import {
     buyAugs,
     buyNeuroFluxGovernor,
     installAugs,
+    joinNetburnersIfOffered,
 } from "/lib/Faction";
 import { ScriptResult, sendControlMsg } from "/lib/Optimize";
 
@@ -23,6 +24,7 @@ export async function main(ns: NS) {
             if (await joinFactionWithAugsToBuy(ns)) sendControlMsg(ns, getControlMsg(state));
             break;
         case "getRep":
+            joinNetburnersIfOffered(ns);
             if (getEnoughRep(ns)) sendControlMsg(ns, getControlMsg(state));
             break;
         case "saveMoney":

@@ -6,103 +6,87 @@ export async function main(ns: NS) {
     const logger = new Logger(ns);
     logger.trace("starting");
 
+    const rootedServers = Array.from(getAllRootedServers(ns))
+        .map((hostname) => new Target(ns, hostname))
+        .filter((target) => target.hostname !== "home");
+
+    await distributeHackFiles(ns, rootedServers);
+
+    something(ns, rootedServers);
+
+    const potentialTargets = getPotentialTargets(ns, rootedServers);
+
+    doHack(ns, potentialTargets);
+}
+
+class Target {
+    private ns: NS;
+    hostname: string;
+
+    constructor(ns: NS, hostname: string) {
+        this.ns = ns;
+        this.hostname = hostname;
+    }
+
+    get maxMoney() {
+        return this.ns.getServerMaxMoney(this.hostname);
+    }
+    get money() {
+        return this.ns.getServerMoneyAvailable(this.hostname);
+    }
+
+    get minSecurity() {
+        return this.ns.getServerMinSecurityLevel(this.hostname);
+    }
+    get security() {
+        return this.ns.getServerSecurityLevel(this.hostname);
+    }
+
+    get hackChance() {
+        return this.ns.hackAnalyzeChance(this.hostname);
+    }
+    get hackTime() {
+        return this.ns.getHackTime(this.hostname) / 1000;
+    }
+    get growTime() {
+        return this.ns.getGrowTime(this.hostname) / 1000;
+    }
+    get weakenTime() {
+        return this.ns.getWeakenTime(this.hostname) / 1000;
+    }
+
+    get rate() {
+        return (this.maxMoney * this.hackChance) / this.hackTime;
+    }
+}
+
+async function distributeHackFiles(ns: NS, rootedServers: Target[]) {
     const hackFiles = ["/bin/hack.js", "/bin/grow.js", "/bin/weaken.js", "/lib/Logger.js"];
+
+    for (const target of rootedServers) {
+        if (hackFiles.every((filename) => ns.fileExists(filename, target.hostname))) continue;
+        await ns.scp(hackFiles, target.hostname);
+    }
+}
+
+function getPotentialTargets(ns: NS, rootedServers: Target[]) {
+    const myHackingLevel = ns.getHackingLevel();
+    return rootedServers
+        .filter((target) => myHackingLevel >= ns.getServerRequiredHackingLevel(target.hostname))
+        .sort((a, b) => b.rate - a.rate);
+}
+
+function doHack(ns: NS, rootedServers: Target[]) {
+    const logger = new Logger(ns);
+
     const hackRam = ns.getScriptRam("/bin/hack.js");
     const growRam = ns.getScriptRam("/bin/grow.js");
     const weakenRam = ns.getScriptRam("/bin/weaken.js");
 
-    const rootedServers = Array.from(getAllRootedServers(ns));
-
-    for (const hostname of rootedServers) {
-        if (hackFiles.every((filename) => ns.fileExists(filename, hostname))) continue;
-        await ns.scp(hackFiles, hostname);
-    }
-
-    const myHackingLevel = ns.getHackingLevel();
-
-    const potentialTargets = rootedServers
-        .filter((hostname) => myHackingLevel >= ns.getServerRequiredHackingLevel(hostname))
-        .map((hostname) => ({
-            hostname: hostname,
-
-            get maxMoney() {
-                return ns.getServerMaxMoney(this.hostname);
-            },
-            get money() {
-                return ns.getServerMoneyAvailable(this.hostname);
-            },
-
-            get minSecurity() {
-                return ns.getServerMinSecurityLevel(this.hostname);
-            },
-            get security() {
-                return ns.getServerSecurityLevel(this.hostname);
-            },
-
-            get hackChance() {
-                return ns.hackAnalyzeChance(this.hostname);
-            },
-            get hackTime() {
-                return ns.getHackTime(this.hostname) / 1000;
-            },
-
-            get rate() {
-                return (this.maxMoney * this.hackChance) / this.hackTime;
-            },
-        }));
-
-    if (potentialTargets.length === 0) return;
-
-    const target = potentialTargets
-        // super basic, just choose target to be the one with the highest max money
-        // this could probably be optimized to take into account other factors but idk how to do that yet
-        .reduce((prevHost, currHost) => (prevHost.rate > currHost.rate ? prevHost : currHost));
-
-    // calculate state by the time hack/grow/weaken would complete
-
-    // this could be better by computing with respect to time
-    // const currentlyRunning = rootedServers
-    //     .map((hostname) => ({
-    //         hostname: hostname,
-    //         activeScript:
-    //             ns.getRunningScript("/bin/hack.js", hostname) ||
-    //             ns.getRunningScript("/bin/weaken.js", hostname) ||
-    //             ns.getRunningScript("/bin/grow.js", hostname),
-    //     }))
-    //     .filter((machine) => machine.activeScript)
-    //     .forEach((machine) => {
-    //         switch (machine.activeScript.filename) {
-    //             case "/bin/hack.js": {
-    //                 const securityIncrease = ns.hackAnalyzeSecurity(machine.activeScript.threads);
-    //                 target.security = Math.max(100, target.security + target.hackChance * securityIncrease);
-    //                 const moneyDecrease = ns.hackAnalyze(target.hostname) * machine.activeScript.threads;
-    //                 target.money = Math.min(0, target.money - target.hackChance * moneyDecrease);
-    //                 break;
-    //             }
-    //             case "/bin/weaken.js":
-    //                 const securityDecrease = ns.weakenAnalyze(machine.activeScript.threads);
-    //                 target.security = Math.min(target.minSecurity, target.security - securityDecrease);
-    //                 break;
-    //             case "/bin/grow.js":
-    //                 const securityIncrease = ns.growthAnalyzeSecurity(machine.activeScript.threads);
-    //                 target.security = Math.max(100, target.security + securityIncrease);
-    //                 const moneyIncrease = target.money * ns.getServerGrowth(target.hostname); // todo: probably super wrong
-
-    //                 break;
-    //             default:
-    //                 throw new Error("unexpected script");
-    //         }
-    //     });
-
-    // todo: need to figure out an equation for dollars per second when hacking/growing/weakening
-
-    // todo: adjust targetMoney/targetSecurity by factoring in active scripts here
-
-    // todo: run hack/grow/weaken while calculating effects
+    const target = rootedServers[0];
 
     rootedServers
-        .filter((hostname) => hostname !== "home")
-        .map((hostname) => {
+        .map((scriptHost) => {
             let scriptname = "/bin/hack.js";
             let ram = hackRam;
 
@@ -115,9 +99,11 @@ export async function main(ns: NS) {
             }
 
             return {
-                hostname: hostname,
+                hostname: scriptHost.hostname,
                 scriptname: scriptname,
-                threads: Math.floor((ns.getServerMaxRam(hostname) - ns.getServerUsedRam(hostname)) / ram),
+                threads: Math.floor(
+                    (ns.getServerMaxRam(scriptHost.hostname) - ns.getServerUsedRam(scriptHost.hostname)) / ram
+                ),
             };
         })
         .filter((server) => server.threads)
@@ -128,4 +114,40 @@ export async function main(ns: NS) {
             }
             logger.error("failed to hack", target.hostname, server.hostname, server.threads);
         });
+}
+
+function something(ns: NS, rootedServers: Target[]) {
+    const logger = new Logger(ns);
+
+    rootedServers.forEach((server) => {
+        const scripts = allScriptsAgainstTarget(ns, rootedServers, server.hostname);
+        if (scripts.length > 0) logger.trace("scriptsAgainstTarget", scripts);
+    });
+}
+
+function allScriptsAgainstTarget(ns: NS, rootedServers: Target[], target: string) {
+    return rootedServers
+        .flatMap((server) => {
+            const scripts: any = [];
+            [
+                { action: "weaken", time: server.weakenTime },
+                { action: "grow", time: server.growTime },
+                { action: "hack", time: server.hackTime },
+            ].forEach((scriptType) => {
+                const script = ns.getRunningScript(
+                    `/bin/${scriptType.action}.js`,
+                    server.hostname,
+                    ...["--target", target]
+                );
+                if (script) {
+                    scripts.push({
+                        action: scriptType.action,
+                        threads: script.threads,
+                        remainingTime: scriptType.time - script.onlineRunningTime,
+                    });
+                }
+            });
+            return scripts;
+        })
+        .sort((a, b) => a.remainingTime - b.remainingTime);
 }

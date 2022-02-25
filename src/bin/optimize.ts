@@ -38,7 +38,10 @@ export async function main(ns: NS) {
         }
 
         const secondaryScripts = activeScripts.filter((script) => !script.runFast);
-        for (const secondaryScript of secondaryScripts) await runScript(ns, secondaryScript);
+        for (const secondaryScript of secondaryScripts) {
+            await runScript(ns, secondaryScript);
+            await ns.sleep(5 * 1000); // give me a chance to check out other script logs
+        }
     }
 }
 

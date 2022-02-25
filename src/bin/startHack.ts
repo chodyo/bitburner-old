@@ -77,8 +77,8 @@ function doHack(ns: NS, rootedServers: Target[]) {
     rootedServers
         .filter((target) => ns.getHackingLevel() >= ns.getServerRequiredHackingLevel(target.hostname))
         .filter((target) => target.maxMoney > 0)
-        .sort((a, b) => a.maxMoney - b.maxMoney) // todo: reverse this (for testing)
-        .slice(0, 2) // todo: this should be adjusted
+        .sort((a, b) => b.maxMoney - a.maxMoney)
+        .slice(0, 10)
         .forEach((target) => {
             logger.trace("now", target.toString());
 

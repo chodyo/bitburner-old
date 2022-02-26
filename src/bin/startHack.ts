@@ -6,9 +6,7 @@ export async function main(ns: NS) {
     const logger = new Logger(ns);
     logger.trace("starting");
 
-    const rootedServers = Array.from(getAllRootedServers(ns))
-        .map((hostname) => new Target(ns, hostname))
-        .filter((target) => target.hostname !== "home");
+    const rootedServers = Array.from(getAllRootedServers(ns)).map((hostname) => new Target(ns, hostname));
 
     await distributeHackFiles(ns, rootedServers);
 
@@ -67,6 +65,7 @@ async function distributeHackFiles(ns: NS, rootedServers: Target[]) {
     const hackFiles = ["/bin/hack.js", "/bin/grow.js", "/bin/weaken.js", "/lib/Logger.js"];
 
     for (const target of rootedServers) {
+        if (target.hostname === "home") continue;
         if (hackFiles.every((filename) => ns.fileExists(filename, target.hostname))) continue;
         await ns.scp(hackFiles, target.hostname);
     }
@@ -77,8 +76,9 @@ function doHack(ns: NS, rootedServers: Target[]) {
     rootedServers
         .filter((target) => ns.getHackingLevel() >= ns.getServerRequiredHackingLevel(target.hostname))
         .filter((target) => target.maxMoney > 0)
-        .sort((a, b) => b.maxMoney - a.maxMoney)
-        .slice(0, 10)
+        .filter((target) => target.hostname !== "home")
+        .sort((a, b) => a.maxMoney - b.maxMoney)
+        // .slice(0, 10)
         .forEach((target) => {
             logger.trace("now", target.toString());
 
@@ -131,7 +131,8 @@ function spinUpScriptWithThreads(
     for (const server of rootedServers) {
         if (totalThreads <= 0) return;
 
-        const serverRamAvailable = ns.getServerMaxRam(server.hostname) - ns.getServerUsedRam(server.hostname);
+        const serverMaxRam = ns.getServerMaxRam(server.hostname) - (server.hostname === "home" ? 64 : 0); // keep some reserve
+        const serverRamAvailable = serverMaxRam - ns.getServerUsedRam(server.hostname);
         const serverThreads = Math.floor(serverRamAvailable / ramPerThread);
         if (serverThreads === 0) continue;
 

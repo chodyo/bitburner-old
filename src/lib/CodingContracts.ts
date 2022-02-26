@@ -211,7 +211,7 @@ export async function main(ns: NS) {
                 return;
             }
             const validIPAddresses = ip(digits);
-            logger.info("=>", ...Array.from(validIPAddresses.keys()));
+            logger.info("=>", ...Array.from(validIPAddresses));
             break;
         }
 
@@ -508,7 +508,7 @@ function expr(word: string, target: number): string[] {
 }
 
 function ip(digits: string, octets = 4) {
-    const combinations = new Map<string, boolean>();
+    const combinations = new Set<string>();
 
     // shortcuts :)
     const tooLong = digits.length > 12;
@@ -531,7 +531,7 @@ function ip(digits: string, octets = 4) {
         const remainder = padDigits.slice(3);
 
         // disqualifiers
-        const octetStartedWith0 = digits.startsWith("0");
+        const octetStartedWith0 = digits.startsWith("0") && octet !== 0; // it's ok to start with 0 if the octet value is 0
         const octetValueOutOfRange = octet >= maxOctetVal;
         const finalOctetShouldntHaveRemainder = octets === 1 && remainder !== "";
         const nonfinalOctetMustHaveRemainder = octets > 1 && remainder === "";
@@ -546,14 +546,14 @@ function ip(digits: string, octets = 4) {
 
         // base case
         if (octets === 1) {
-            combinations.set(octet.toString(), true);
+            combinations.add(octet.toString());
             continue;
         }
 
         // non-base
         const parsedRemainder = ip(remainder, octets - 1);
         parsedRemainder.forEach((_bool, remainderCombination) => {
-            combinations.set(`${octet}.${remainderCombination}`, true);
+            combinations.add(`${octet}.${remainderCombination}`);
         });
     }
     return combinations;

@@ -133,13 +133,15 @@ function spinUpScriptWithThreads(
 
         const serverMaxRam = ns.getServerMaxRam(server.hostname) - (server.hostname === "home" ? 64 : 0); // keep some reserve
         const serverRamAvailable = serverMaxRam - ns.getServerUsedRam(server.hostname);
-        const serverThreads = Math.floor(serverRamAvailable / ramPerThread);
-        if (serverThreads === 0) continue;
+        const serverMaxThreads = Math.floor(serverRamAvailable / ramPerThread);
+        if (serverMaxThreads === 0) continue;
 
-        ns.exec(scriptname, server.hostname, serverThreads, ...["--target", target.hostname]);
+        const threads = Math.min(totalThreads, serverMaxThreads);
+
+        ns.exec(scriptname, server.hostname, threads, ...["--target", target.hostname]);
         logger.trace("started script on server against target", scriptname, server.hostname, target.hostname);
 
-        totalThreads -= serverThreads;
+        totalThreads -= threads;
     }
 }
 

@@ -100,7 +100,8 @@ function doHack(ns: NS, rootedServers: Target[]) {
                 stateWhenGrowCompletes.money < target.maxMoney &&
                 stateWhenGrowCompletes.security <= target.minSecurity
             ) {
-                const threads = ns.growthAnalyze(target.hostname, target.maxMoney / (target.money || 0.00001)); // protect against money===0
+                const nonzeroMoney = target.money || 0.00000000001; // protect against div by 0
+                const threads = Math.ceil(ns.growthAnalyze(target.hostname, target.maxMoney / nonzeroMoney));
                 spinUpScriptWithThreads(ns, rootedServers, target, "/bin/grow.js", threads);
             }
 
@@ -112,7 +113,7 @@ function doHack(ns: NS, rootedServers: Target[]) {
                 stateWhenHackCompletes.security <= target.minSecurity
             ) {
                 const hackAmount = (7 / 100) * target.maxMoney; // todo: configurable
-                const threads = ns.hackAnalyzeThreads(target.hostname, hackAmount);
+                const threads = Math.ceil(ns.hackAnalyzeThreads(target.hostname, hackAmount));
                 spinUpScriptWithThreads(ns, rootedServers, target, "/bin/hack.js", threads);
             }
         });
@@ -138,8 +139,10 @@ function spinUpScriptWithThreads(
 
         const threads = Math.min(totalThreads, serverMaxThreads);
 
-        ns.exec(scriptname, server.hostname, threads, ...["--target", target.hostname]);
-        logger.trace("started script on server against target", scriptname, server.hostname, target.hostname);
+        const pid = ns.exec(scriptname, server.hostname, threads, ...["--target", target.hostname]);
+        logger.trace(
+            `started=${pid} script=${scriptname} on server=${server.hostname} against target=${target.hostname} threads=${totalThreads}`
+        );
 
         totalThreads -= threads;
     }

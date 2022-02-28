@@ -153,15 +153,43 @@ class HackingGroups extends Factions {
 }
 
 class Megacorporations extends Factions {
-    static readonly ECorp = new Megacorporations("ECorp", { name: "ECorp", corp: 200e3 });
-    static readonly MegaCorp = new Megacorporations("MegaCorp", { name: "MegaCorp", corp: 200e3 });
-    static readonly KuaiGong = new Megacorporations("KuaiGong", { name: "KuaiGong International", corp: 200e3 });
-    static readonly FourSigma = new Megacorporations("FourSigma", { name: "Four Sigma", corp: 200e3 });
-    static readonly NWO = new Megacorporations("NWO", { name: "NWO", corp: 200e3 });
-    static readonly Blade = new Megacorporations("Blade", { name: "Blade Industries", corp: 200e3 });
-    static readonly OmniTek = new Megacorporations("OmniTek", { name: "OmniTek Incorporated", corp: 200e3 });
-    static readonly Bachman = new Megacorporations("Bachman", { name: "Bachman & Associates", corp: 200e3 });
-    static readonly Clarke = new Megacorporations("Clarke", { name: "Clarke Incorporated", corp: 200e3 });
+    static readonly ECorp = new Megacorporations("ECorp", { name: "ECorp", corp: 200e3, backdoorHostname: "ecorp" });
+    static readonly MegaCorp = new Megacorporations("MegaCorp", {
+        name: "MegaCorp",
+        corp: 200e3,
+        backdoorHostname: "megacorp",
+    });
+    static readonly KuaiGong = new Megacorporations("KuaiGong", {
+        name: "KuaiGong International",
+        corp: 200e3,
+        backdoorHostname: "kuai-gong",
+    });
+    static readonly FourSigma = new Megacorporations("FourSigma", {
+        name: "Four Sigma",
+        corp: 200e3,
+        backdoorHostname: "",
+    });
+    static readonly NWO = new Megacorporations("NWO", { name: "NWO", corp: 200e3, backdoorHostname: "nwo" });
+    static readonly Blade = new Megacorporations("Blade", {
+        name: "Blade Industries",
+        corp: 200e3,
+        backdoorHostname: "blade",
+    });
+    static readonly OmniTek = new Megacorporations("OmniTek", {
+        name: "OmniTek Incorporated",
+        corp: 200e3,
+        backdoorHostname: "omnitek",
+    });
+    static readonly Bachman = new Megacorporations("Bachman", {
+        name: "Bachman & Associates",
+        corp: 200e3,
+        backdoorHostname: "",
+    });
+    static readonly Clarke = new Megacorporations("Clarke", {
+        name: "Clarke Incorporated",
+        corp: 200e3,
+        backdoorHostname: "clarkinc",
+    });
     static readonly Fulcrum = new Megacorporations("Fulcrum", {
         name: "Fulcrum Secret Technologies",
         corpName: "Fulcrum Technologies",

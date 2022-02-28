@@ -389,7 +389,7 @@ function workForCorp(ns: NS, corpName: string, repThreshold: number) {
     if (!currentWorkName || currentWorkName !== corpName) ns.workForCompany(corpName);
 
     const earned = ns.getPlayer().workRepGained;
-    if (current + 2 * earned >= repThreshold) {
+    if (current + earned / 2 >= repThreshold) {
         ns.stopAction();
         return true;
     }

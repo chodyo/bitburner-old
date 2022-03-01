@@ -308,7 +308,7 @@ export function buyNeuroFluxGovernor(ns: NS) {
 
     while (
         ns.getServerMoneyAvailable("home") >= ns.getAugmentationPrice(infinitelyUpgradableAug) &&
-        ns.getAugmentationRepReq(infinitelyUpgradableAug)
+        ns.getFactionRep(faction) >= ns.getAugmentationRepReq(infinitelyUpgradableAug)
     ) {
         if (!ns.purchaseAugmentation(faction, infinitelyUpgradableAug)) {
             throw new Error(`tried to buy an aug but failed ${faction} ${infinitelyUpgradableAug}`);

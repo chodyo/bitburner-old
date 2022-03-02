@@ -246,9 +246,30 @@ export function getEnoughRep(ns: NS) {
         return true;
     }
 
-    logger.info("chosen faction", augs[0].faction);
+    const faction = augs[0].faction;
+    const repreq = augs[0].repreq;
+    logger.info("chosen faction", faction, repreq, "all faction augs", augs);
 
-    return hackForFaction(ns, augs[0].faction, augs[0].repreq);
+    const earned = ns.getPlayer().workRepGained;
+    const total = earned + ns.getFactionRep(faction);
+    const remainder = repreq - total;
+
+    const donosUnlocked = ns.getFactionFavor(faction) >= ns.getFavorToDonate();
+    // https://github.com/danielyxie/bitburner/blob/f5386acc17de63b66530fc6aad8f911c451663f6/src/Faction/formulas/donation.ts#L5
+    // https://github.com/danielyxie/bitburner/blob/f5386acc17de63b66530fc6aad8f911c451663f6/src/Constants.ts#L141
+    const donoAmount = Math.ceil((remainder * 1e6) / ns.getPlayer().faction_rep_mult);
+    const enoughCashToReachRepGoal = ns.getServerMoneyAvailable("home") >= donoAmount;
+
+    if (remainder && donosUnlocked) {
+        ns.donateToFaction(faction, enoughCashToReachRepGoal ? donoAmount : ns.getServerMoneyAvailable("home") / 3);
+    }
+
+    const canUnlockDonos = ns.getFactionFavor(faction) + ns.getFactionFavorGain(faction) >= ns.getFavorToDonate();
+    if (!donosUnlocked && canUnlockDonos) {
+        installAugs(ns);
+    }
+
+    return hackForFaction(ns, faction, repreq);
 }
 
 export function saveMoney(_: NS) {
@@ -323,6 +344,7 @@ export function installAugs(ns: NS) {
     // https://github.com/danielyxie/bitburner/issues/2902
     ns.stopAction();
     ns.installAugmentations("/bin/optimize.js");
+    ns.softReset("/bin/optimize.js"); // if i have no augs
 }
 
 function unownedUninstalledAugmentsFromFactions(ns: NS, ...factions: string[]) {
@@ -364,18 +386,16 @@ async function induceFactionInvite(ns: NS) {
 
 function hackForFaction(ns: NS, factionName: string, repThreshold: number) {
     const current = ns.getFactionRep(factionName);
-    if (current >= repThreshold) return true;
-
-    const currentFactionName = ns.getPlayer().currentWorkFactionName;
-    if (!currentFactionName || currentFactionName !== factionName) ns.workForFaction(factionName, "hacking");
 
     const earned = ns.getPlayer().workRepGained;
     if (current + earned >= repThreshold) {
         ns.stopAction();
-        return true;
     }
 
-    return false;
+    const currentFactionName = ns.getPlayer().currentWorkFactionName;
+    if (!currentFactionName || currentFactionName !== factionName) ns.workForFaction(factionName, "hacking");
+
+    return ns.getFactionRep(factionName) >= repThreshold;
 }
 
 function workForCorp(ns: NS, corpName: string, repThreshold: number) {

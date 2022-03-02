@@ -67,7 +67,11 @@ abstract class Factions {
         let ready = true;
 
         if (this.value.backdoorHostname && !(await this.backdoor(ns))) ready = false;
-        if (this.value.city && !ns.travelToCity(this.value.city)) ready = false;
+
+        const alreadyHere = ns.getPlayer().city === this.value.city;
+        const haveEnoughCash = ns.getServerMoneyAvailable("home") >= 200e3;
+        if (this.value.city && !alreadyHere && haveEnoughCash) ready = ns.travelToCity(this.value.city);
+
         if (this.value.corp && !workForCorp(ns, this.value.corpName || this.value.name, this.value.corp)) ready = false;
 
         return ready;

@@ -1,6 +1,5 @@
 import { NS } from "Bitburner";
 import { Logger } from "lib/Logger";
-import { PortNumbers } from "lib/PortNumbers";
 
 const minRoiRecoverySeconds = 30 * 60;
 
@@ -78,6 +77,24 @@ export function buyHacknetUpgrade(ns: NS) {
     }
     logger.info(`upgraded hacknet, best upgrade=${JSON.stringify(best)} result=${result}`);
     return true;
+}
+
+export function induceNetburnerInvite(ns: NS): boolean {
+    const logger = new Logger(ns);
+
+    let purchases = 0;
+    while (ns.hacknet.numNodes() < 8 && ns.getServerMoneyAvailable("home") >= ns.hacknet.getPurchaseNodeCost()) {
+        if (ns.hacknet.purchaseNode() === -1) {
+            throw new Error("failed to buy a new hacknet node to induce netburner faction invite");
+        }
+        purchases++;
+    }
+
+    if (purchases) {
+        logger.toast(`bought ${purchases} hacknet node(s)`);
+    }
+
+    return ns.hacknet.numNodes() >= 8;
 }
 
 /**
@@ -166,7 +183,7 @@ function moneyGainRate(
     return levelMult * ramMult * coresMult * hacknetProductionMult * bitNodeMult;
 }
 
-function getBitnodeMult(ns: NS) {
+function getBitnodeMult(_ns: NS) {
     // BitNodeMultipliers.HacknetNodeMoney
     // if (hasSourceFile(ns, 5, 1)) {
     //     return ns.getBitNodeMultipliers().HacknetNodeMoney;

@@ -2,7 +2,7 @@ import { NS } from "Bitburner";
 import { Logger } from "/lib/Logger";
 import { connect } from "/lib/Connect";
 import { gainRootAccess } from "/lib/Root";
-// import { workingRepEarned, workingRepRate } from "/lib/Document";
+import { induceNetburnerInvite } from "/lib/Hacknet";
 
 const infinitelyUpgradableAug = "NeuroFlux Governor";
 
@@ -35,6 +35,9 @@ type Faction = {
 
     // the name of the corporation if it's different from the faction
     corpName?: string;
+
+    // the function to call if the faction needs a custom action performed
+    special?: (ns: NS) => boolean;
 };
 
 abstract class Factions {
@@ -74,6 +77,8 @@ abstract class Factions {
 
         if (this.value.corp && !workForCorp(ns, this.value.corpName || this.value.name, this.value.corp)) ready = false;
 
+        if (this.value.special) ready = this.value.special(ns);
+
         return ready;
     }
 
@@ -105,7 +110,10 @@ abstract class Factions {
 class EarlyGameFactions extends Factions {
     static readonly CyberSec = new EarlyGameFactions("CyberSec", { name: "CyberSec", backdoorHostname: "CSEC" });
     static readonly TianDiHui = new EarlyGameFactions("TianDiHui", { name: "Tian Di Hui", city: "Chongqing" });
-    static readonly Netburners = new EarlyGameFactions("Netburners", { name: "Netburners" });
+    static readonly Netburners = new EarlyGameFactions("Netburners", {
+        name: "Netburners",
+        special: induceNetburnerInvite,
+    });
 
     // private to disallow creating other instances of this type
     private constructor(readonly key: string, readonly value: Faction) {

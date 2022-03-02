@@ -12,18 +12,15 @@ export async function main(ns: NS) {
 
     const scripts = [
         { name: "/bin/startHack.js", active: true, runFast: true },
-        { name: "/bin/darkweb.js", active: true },
-        { name: "/bin/hacknet.js", active: true },
-        { name: "/bin/contracts.js", active: true },
-        { name: "/bin/home.js", active: true },
-        { name: "/bin/pserv.js", active: true },
-        { name: "/bin/faction.js", active: true, args: ["--state", "joinFaction"] },
         { name: "/bin/redpill.js", active: true },
+        { name: "/bin/contracts.js", active: true },
+        { name: "/bin/faction.js", active: true, args: ["--state", "joinFaction"] },
+        { name: "/bin/home.js", active: true },
+        { name: "/bin/darkweb.js", active: true },
+        { name: "/bin/pserv.js", active: true },
+        { name: "/bin/hacknet.js", active: true },
     ];
 
-    // i'm going to run the startHack script this many ms apart, 1000 times. so the secondary
-    // scripts will run once per this many seconds. the math will need to change if i add another
-    // runfast script
     const secondaryScriptRunFrequencySeconds = 20;
 
     while (scripts.some((script) => script.active)) {
@@ -32,7 +29,7 @@ export async function main(ns: NS) {
         const activeScripts = scripts.filter((script) => script.active);
 
         const runFastScripts = activeScripts.filter((script) => script.runFast);
-        for (let i = 0; i < 1000; i++) {
+        for (let i = 0; i < 100; i++) {
             for (const fastScript of runFastScripts) await runScript(ns, fastScript);
             await ns.sleep(secondaryScriptRunFrequencySeconds);
         }
@@ -40,7 +37,7 @@ export async function main(ns: NS) {
         const secondaryScripts = activeScripts.filter((script) => !script.runFast);
         for (const secondaryScript of secondaryScripts) {
             await runScript(ns, secondaryScript);
-            await ns.sleep(5 * 1000); // give me a chance to check out other script logs
+            await ns.sleep(2 * 1000); // give me a chance to check out other script logs
         }
     }
 }

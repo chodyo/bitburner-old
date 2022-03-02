@@ -171,5 +171,5 @@ function getBitnodeMult(ns: NS) {
     // if (hasSourceFile(ns, 5, 1)) {
     //     return ns.getBitNodeMultipliers().HacknetNodeMoney;
     // }
-    return 0.05;
+    return 1;
 }

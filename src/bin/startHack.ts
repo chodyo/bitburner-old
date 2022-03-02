@@ -128,14 +128,16 @@ function spinUpScriptWithThreads(
 ) {
     const logger = new Logger(ns);
 
+    const homeReserveRam = ns.getScriptRam("/bin/faction.js") + ns.getScriptRam("/bin/optimize.js") + 2;
+
     const ramPerThread = ns.getScriptRam(scriptname);
     for (const server of rootedServers) {
         if (totalThreads <= 0) return;
 
-        const serverMaxRam = ns.getServerMaxRam(server.hostname) - (server.hostname === "home" ? 64 : 0); // keep some reserve
+        const serverMaxRam = ns.getServerMaxRam(server.hostname) - (server.hostname === "home" ? homeReserveRam : 0);
         const serverRamAvailable = serverMaxRam - ns.getServerUsedRam(server.hostname);
         const serverMaxThreads = Math.floor(serverRamAvailable / ramPerThread);
-        if (serverMaxThreads === 0) continue;
+        if (serverMaxThreads <= 0) continue;
 
         const threads = Math.min(totalThreads, serverMaxThreads);
 

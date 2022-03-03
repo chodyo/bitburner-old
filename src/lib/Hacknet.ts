@@ -1,5 +1,6 @@
 import { NS } from "Bitburner";
 import { Logger } from "lib/Logger";
+import { desiredSavings } from "lib/Money";
 
 const minRoiRecoverySeconds = 30 * 60;
 
@@ -157,7 +158,7 @@ function shouldIBuyUpgrade(ns: NS, cost: number, extraCashRate: number) {
 
     const cash = ns.getServerMoneyAvailable("home");
 
-    const haveEnoughCash = cash >= cost;
+    const haveEnoughCash = cash >= cost + desiredSavings(ns, 30);
     const roiQuickly = cost / extraCashRate <= minRoiRecoverySeconds;
     const excessiveWealthRatio = cost / extraCashRate <= cash / cost;
 

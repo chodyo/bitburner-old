@@ -20,6 +20,8 @@ class Target {
     security: number;
     money: number;
 
+    private bufferTime = 0.1;
+
     constructor(ns: NS, hostname: string) {
         this.ns = ns;
         this.hostname = hostname;
@@ -48,13 +50,13 @@ class Target {
         return this.ns.hackAnalyzeChance(this.hostname);
     }
     get hackTime() {
-        return this.ns.getHackTime(this.hostname) / 1000;
+        return this.ns.getHackTime(this.hostname) / 1000 + this.bufferTime;
     }
     get growTime() {
-        return this.ns.getGrowTime(this.hostname) / 1000;
+        return this.ns.getGrowTime(this.hostname) / 1000 + this.bufferTime;
     }
     get weakenTime() {
-        return this.ns.getWeakenTime(this.hostname) / 1000;
+        return this.ns.getWeakenTime(this.hostname) / 1000 + this.bufferTime;
     }
     get rate() {
         return (this.maxMoney * this.hackChance) / this.hackTime;

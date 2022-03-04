@@ -434,8 +434,8 @@ function workForCorp(ns: NS, corpName: string, repThreshold: number) {
 // i hypthesize it'll come during the first or maybe second faction grind which will REALLY slow things down
 export function joinNetburnersIfOffered(ns: NS) {
     const netburners = EarlyGameFactions.Netburners;
-    if (ns.checkFactionInvitations().includes(netburners)) {
+    if (ns.checkFactionInvitations().includes(netburners.toString())) {
         new Logger(ns).toast("joined netburners on a whim :)");
-        ns.joinFaction(netburners);
+        ns.joinFaction(netburners.toString());
     }
 }

@@ -428,14 +428,3 @@ function workForCorp(ns: NS, corpName: string, repThreshold: number) {
 
     return false;
 }
-
-// a bit weird, but this is the kludge to prevent me having to actually induce a faction invite with them
-// we can try just tacking them on to whatever we're grinding
-// i hypthesize it'll come during the first or maybe second faction grind which will REALLY slow things down
-export function joinNetburnersIfOffered(ns: NS) {
-    const netburners = EarlyGameFactions.Netburners;
-    if (ns.checkFactionInvitations().includes(netburners.toString())) {
-        new Logger(ns).toast("joined netburners on a whim :)");
-        ns.joinFaction(netburners.toString());
-    }
-}

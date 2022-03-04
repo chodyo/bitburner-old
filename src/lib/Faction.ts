@@ -231,17 +231,17 @@ export async function joinFactionWithAugsToBuy(ns: NS) {
         return true;
     }
 
-    const augsAvailableFromInvitedFactions = unownedUninstalledAugmentsFromFactions(
-        ns,
-        ...ns.checkFactionInvitations()
-    );
-    if (augsAvailableFromInvitedFactions.length > 0) {
-        [...new Set(augsAvailableFromInvitedFactions.map((aug) => aug.faction))].forEach((faction) => {
-            logger.trace("joining", faction);
-            ns.joinFaction(faction);
-        });
-        return true;
-    }
+    // const augsAvailableFromInvitedFactions = unownedUninstalledAugmentsFromFactions(
+    //     ns,
+    //     ...ns.checkFactionInvitations()
+    // );
+    // if (augsAvailableFromInvitedFactions.length > 0) {
+    //     [...new Set(augsAvailableFromInvitedFactions.map((aug) => aug.faction))].forEach((faction) => {
+    //         logger.trace("joining", faction);
+    //         ns.joinFaction(faction);
+    //     });
+    //     return true;
+    // }
 
     await induceFactionInvite(ns);
 }
@@ -394,6 +394,10 @@ async function induceFactionInvite(ns: NS) {
     const f: Factions = Factions.from(augs[0].faction);
     logger.info(`inducing faction invite with ${f}`);
     await f.induceInvite(ns);
+
+    if (ns.checkFactionInvitations().includes(f.name)) {
+        return ns.joinFaction(f.name);
+    }
 }
 
 function hackForFaction(ns: NS, factionName: string, repThreshold: number) {

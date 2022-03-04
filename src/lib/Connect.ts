@@ -1,13 +1,15 @@
 import { NS } from "Bitburner";
 import { Logger } from "/lib/Logger";
+import { Autocomplete } from "/lib/Autocomplete";
 
 export async function main(ns: NS) {
     const hostname = ns.args[0].toString();
     const logger = new Logger(ns, { stdout: true });
     connect(ns, hostname, logger);
+    ns.flags;
 }
 
-export function autocomplete(data: unknown) {
+export function autocomplete(data: Autocomplete) {
     return [...data.servers];
 }
 

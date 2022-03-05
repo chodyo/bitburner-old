@@ -1,6 +1,7 @@
 import { NS } from "Bitburner";
 import { connect } from "/lib/Connect";
 import { Logger } from "/lib/Logger";
+import { gainRootAccess } from "/lib/Root";
 
 const theRedPill = "The Red Pill";
 const worldDaemon = "w0r1d_d43m0n";
@@ -15,6 +16,11 @@ export async function main(ns: NS) {
 
     if (ns.getHackingLevel() < ns.getServerRequiredHackingLevel(worldDaemon)) {
         logger.trace("not high enough level to backdoor world daemon yet");
+        return;
+    }
+
+    if (!gainRootAccess(ns, worldDaemon)) {
+        logger.trace("failed to gain root access to world daemon");
         return;
     }
 

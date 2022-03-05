@@ -13,9 +13,7 @@ enum upgrades {
 
 export async function main(ns: NS) {
     const logger = new Logger(ns);
-    logger.alert(`reminder: hard coded bitNodeMult=${getBitnodeMult(ns)} for SF4.1`, "warning");
     logger.info(`hacknet production mult ${ns.getHacknetMultipliers().production}`);
-    logger.info(`bitnode hacknet mult ${getBitnodeMult(ns)}`);
 
     while (hacknetUpgradable(ns)) {
         let upgradeCount = 0;
@@ -171,7 +169,7 @@ function moneyGainRate(
     ram: number,
     cores: number,
     hacknetProductionMult = ns.getHacknetMultipliers().production,
-    bitNodeMult = getBitnodeMult(ns)
+    bitNodeMult = ns.getBitNodeMultipliers().HacknetNodeMoney
 ) {
     // HacknetNodeConstants.MoneyGainPerLevel
     // this seems actually constant (compared to bitNodeMult)
@@ -182,12 +180,4 @@ function moneyGainRate(
     const coresMult = (cores + 5) / 6;
 
     return levelMult * ramMult * coresMult * hacknetProductionMult * bitNodeMult;
-}
-
-function getBitnodeMult(_ns: NS) {
-    // BitNodeMultipliers.HacknetNodeMoney
-    // if (hasSourceFile(ns, 5, 1)) {
-    //     return ns.getBitNodeMultipliers().HacknetNodeMoney;
-    // }
-    return 1;
 }

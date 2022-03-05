@@ -8,7 +8,6 @@ const scriptsThatCostMeMoney = ["/bin/darkweb.js", "/bin/hacknet.js", "/bin/home
 export async function main(ns: NS) {
     const logger = new Logger(ns);
     logger.trace("starting");
-    logger.toast("reminder that hacknet has the bitnode mult hardcoded to 1", "warning");
 
     const scripts = [
         { name: "/bin/startHack.js", active: true, runFast: true },

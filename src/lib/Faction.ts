@@ -179,7 +179,7 @@ class Megacorporations extends Factions {
     static readonly FourSigma = new Megacorporations("FourSigma", {
         name: "Four Sigma",
         corp: 200e3,
-        backdoorHostname: "",
+        backdoorHostname: "4sigma",
     });
     static readonly NWO = new Megacorporations("NWO", { name: "NWO", corp: 200e3, backdoorHostname: "nwo" });
     static readonly Blade = new Megacorporations("Blade", {
@@ -195,7 +195,7 @@ class Megacorporations extends Factions {
     static readonly Bachman = new Megacorporations("Bachman", {
         name: "Bachman & Associates",
         corp: 200e3,
-        backdoorHostname: "",
+        backdoorHostname: "b-and-a",
     });
     static readonly Clarke = new Megacorporations("Clarke", {
         name: "Clarke Incorporated",

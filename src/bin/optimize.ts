@@ -10,8 +10,8 @@ export async function main(ns: NS) {
     logger.trace("starting");
 
     const scripts = [
-        { name: "/bin/startHack.js", active: true, runFast: true },
-        { name: "/bin/redpill.js", active: true },
+        { name: "/bin/startHack.js", active: true, runOnce: true },
+        { name: "/bin/redpill.js", active: true, runFast: false },
         { name: "/bin/contracts.js", active: true },
         { name: "/bin/faction.js", active: true, args: ["--state", "joinFaction"] },
         { name: "/bin/home.js", active: true },
@@ -20,28 +20,43 @@ export async function main(ns: NS) {
         { name: "/bin/hacknet.js", active: true },
     ];
 
-    const secondaryScriptRunFrequencySeconds = 20;
-
     while (scripts.some((script) => script.active)) {
         updateScriptsBasedOnCtrlMsgs(ns, scripts);
 
         const activeScripts = scripts.filter((script) => script.active);
 
+        const runOnceScripts = activeScripts.filter((script) => script.runOnce);
+        for (const script of runOnceScripts) {
+            const runningScript = ns.getRunningScript(script.name, "home");
+            if (!runningScript) {
+                startScript(ns, script);
+            }
+        }
+
         const runFastScripts = activeScripts.filter((script) => script.runFast);
-        for (let i = 0; i < 100; i++) {
-            for (const fastScript of runFastScripts) await runScript(ns, fastScript);
-            await ns.sleep(secondaryScriptRunFrequencySeconds);
+        for (let i = 0; i < 500; i++) {
+            for (const fastScript of runFastScripts) await runTerminatingScript(ns, fastScript);
+            await ns.sleep(5);
         }
 
         const secondaryScripts = activeScripts.filter((script) => !script.runFast);
         for (const secondaryScript of secondaryScripts) {
-            await runScript(ns, secondaryScript);
+            await runTerminatingScript(ns, secondaryScript);
             await ns.sleep(2 * 1000); // give me a chance to check out other script logs
         }
     }
 }
 
-async function runScript(ns: NS, script: { name: string; args?: string[] }) {
+function startScript(ns: NS, script: { name: string; args?: string[] }) {
+    const logger = new Logger(ns);
+
+    const pid = ns.run(script.name, 1, ...(script.args ? script.args : []));
+    if (!pid) {
+        logger.toast(`optimize failed to run ${script.name} - recommend temporarily disabling it`);
+    }
+}
+
+async function runTerminatingScript(ns: NS, script: { name: string; args?: string[] }) {
     const logger = new Logger(ns);
 
     const pid = ns.run(script.name, 1, ...(script.args ? script.args : []));

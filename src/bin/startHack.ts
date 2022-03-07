@@ -6,11 +6,15 @@ export async function main(ns: NS) {
     const logger = new Logger(ns);
     logger.trace("starting");
 
-    const rootedServers = Array.from(getAllRootedServers(ns)).map((hostname) => new Target(ns, hostname));
+    while (true) {
+        const rootedServers = Array.from(getAllRootedServers(ns)).map((hostname) => new Target(ns, hostname));
 
-    await distributeHackFiles(ns, rootedServers);
+        await distributeHackFiles(ns, rootedServers);
 
-    doHack(ns, rootedServers);
+        doHack(ns, rootedServers);
+
+        await ns.sleep(5);
+    }
 }
 
 class Target {
@@ -20,7 +24,7 @@ class Target {
     security: number;
     money: number;
 
-    private bufferTime = 0.1;
+    private bufferTime = 0.001;
 
     constructor(ns: NS, hostname: string) {
         this.ns = ns;
@@ -75,6 +79,7 @@ async function distributeHackFiles(ns: NS, rootedServers: Target[]) {
 
 function doHack(ns: NS, rootedServers: Target[]) {
     const logger = new Logger(ns);
+    const toastHost = "noToast";
     rootedServers
         .filter((target) => ns.getHackingLevel() >= ns.getServerRequiredHackingLevel(target.hostname))
         .filter((target) => target.maxMoney > 0)
@@ -82,22 +87,23 @@ function doHack(ns: NS, rootedServers: Target[]) {
         .sort((a, b) => a.maxMoney - b.maxMoney)
         // .slice(0, 10)
         .forEach((target) => {
-            logger.trace("now", target.toString());
+            // logger.trace("now", target.toString());
 
             // weaken to min
             const stateWhenWeakenCompletes = getServerStateAtTime(ns, rootedServers, target, target.weakenTime);
-            logger.trace("weakenTime", target.weakenTime, "after weaken", stateWhenWeakenCompletes);
+            // logger.trace("weakenTime", target.weakenTime, "after weaken", stateWhenWeakenCompletes);
             if (stateWhenWeakenCompletes.security > target.minSecurity) {
                 let threads = 0;
                 while (target.security - ns.weakenAnalyze(threads) > target.minSecurity) {
                     threads++;
                 }
                 spinUpScriptWithThreads(ns, rootedServers, target, "/bin/weaken.js", threads);
+                if (target.hostname === toastHost) logger.toast(`weakening ${toastHost} with ${threads} threads`);
             }
 
             // grow to 100%
             const stateWhenGrowCompletes = getServerStateAtTime(ns, rootedServers, target, target.growTime);
-            logger.trace("growTime", target.growTime, "after grow", stateWhenGrowCompletes);
+            // logger.trace("growTime", target.growTime, "after grow", stateWhenGrowCompletes);
             if (
                 stateWhenGrowCompletes.money < target.maxMoney &&
                 stateWhenGrowCompletes.security <= target.minSecurity
@@ -105,18 +111,20 @@ function doHack(ns: NS, rootedServers: Target[]) {
                 const nonzeroMoney = target.money || 0.00000000001; // protect against div by 0
                 const threads = Math.ceil(ns.growthAnalyze(target.hostname, target.maxMoney / nonzeroMoney));
                 spinUpScriptWithThreads(ns, rootedServers, target, "/bin/grow.js", threads);
+                if (target.hostname === toastHost) logger.toast(`growing ${toastHost} with ${threads} threads`);
             }
 
             // server is primed and ready for hack to begin
             const stateWhenHackCompletes = getServerStateAtTime(ns, rootedServers, target, target.hackTime);
-            logger.trace("hackTime", target.hackTime, "after hack", stateWhenHackCompletes);
+            // logger.trace("hackTime", target.hackTime, "after hack", stateWhenHackCompletes);
             if (
                 stateWhenHackCompletes.money >= target.maxMoney &&
                 stateWhenHackCompletes.security <= target.minSecurity
             ) {
-                const hackAmount = (7 / 100) * target.maxMoney; // todo: configurable
+                const hackAmount = (15 / 100) * target.maxMoney; // todo: configurable
                 const threads = Math.ceil(ns.hackAnalyzeThreads(target.hostname, hackAmount));
                 spinUpScriptWithThreads(ns, rootedServers, target, "/bin/hack.js", threads);
+                if (target.hostname === toastHost) logger.toast(`hacking ${toastHost} with ${threads} threads`);
             }
         });
 }
@@ -130,7 +138,11 @@ function spinUpScriptWithThreads(
 ) {
     const logger = new Logger(ns);
 
-    const homeReserveRam = ns.getScriptRam("/bin/faction.js") + ns.getScriptRam("/bin/optimize.js") + 2;
+    const homeReserveRam =
+        ns.getScriptRam("/bin/faction.js") +
+        ns.getScriptRam("/bin/optimize.js") +
+        ns.getScriptRam("/bin/startHack.js") +
+        2;
 
     const ramPerThread = ns.getScriptRam(scriptname);
     for (const server of rootedServers) {
@@ -171,11 +183,19 @@ function getServerStateAtTime(
                 result.security = Math.max(result.security, target.minSecurity);
                 break;
             case "grow": {
+                const growthFactor = ns.formulas.hacking.growPercent(
+                    ns.getServer(target.hostname),
+                    script.threads,
+                    ns.getPlayer(),
+                    ns.getServer(script.hostname).cpuCores
+                );
+                // new Logger(ns).info(`growthFactor=${growthFactor}`);
                 const oldServerMoney = result.money;
-                let serverGrowth = ns.getServerGrowth(target.hostname);
-                serverGrowth = serverGrowth < 1 ? 1 : serverGrowth;
-                result.money += 1 * script.threads;
-                result.money *= serverGrowth;
+                // let serverGrowth = ns.getServerGrowth(target.hostname);
+                // serverGrowth = serverGrowth < 1 ? 1 : serverGrowth;
+                // result.money += 1 * script.threads;
+                // result.money *= serverGrowth;
+                result.money *= growthFactor;
                 result.money = Math.min(result.money, target.maxMoney);
                 if (result.money !== oldServerMoney) {
                     result.security += ns.growthAnalyzeSecurity(script.threads);
@@ -185,10 +205,12 @@ function getServerStateAtTime(
             }
             case "hack": {
                 const oldServerMoney = result.money;
-                result.security += ns.hackAnalyzeSecurity(script.threads);
-                result.security = Math.max(result.security, target.minSecurity);
+                const hackFactor =
+                    ns.formulas.hacking.hackPercent(ns.getServer(target.hostname), ns.getPlayer()) * script.threads;
+                new Logger(ns).info(`hackFactor=${hackFactor}`);
+                result.money -= hackFactor * result.money;
                 if (result.money !== oldServerMoney) {
-                    result.security += ns.growthAnalyzeSecurity(script.threads);
+                    result.security += ns.hackAnalyzeSecurity(script.threads);
                     result.security = Math.max(result.security, target.minSecurity);
                 }
                 break;

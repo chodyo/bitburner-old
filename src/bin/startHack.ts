@@ -6,7 +6,7 @@ import { StartHackParams } from "/lib/StartHack";
 
 let params: StartHackParams = {
     logHost: "nobody",
-    hackPercent: 1,
+    hackPercent: 8,
 };
 
 export async function main(ns: NS) {
@@ -97,15 +97,16 @@ async function distributeHackFiles(ns: NS, rootedServers: Target[]) {
 
 function doHack(ns: NS, rootedServers: Target[]) {
     const logger = new Logger(ns);
-    let allServersPrimed = true;
-    rootedServers
+
+    const allServersPrimed = rootedServers
         .filter((target) => ns.getHackingLevel() >= ns.getServerRequiredHackingLevel(target.hostname))
         .filter((target) => target.maxMoney > 0)
         .filter((target) => target.hostname !== "home")
         .sort((a, b) => a.maxMoney - b.maxMoney)
         // .slice(0, 10)
-        .forEach((target) => {
+        .map((target) => {
             // logger.trace("now", target.toString());
+            let targetPrimed = false;
 
             // weaken to min
             const stateWhenWeakenCompletes = getServerStateAtTime(ns, rootedServers, target, target.weakenTime);
@@ -116,7 +117,7 @@ function doHack(ns: NS, rootedServers: Target[]) {
                     threads++;
                 }
                 const notStartedThreads = spinUpScriptWithThreads(ns, rootedServers, target, "/bin/weaken.js", threads);
-                allServersPrimed &&= notStartedThreads === 0;
+                targetPrimed ||= notStartedThreads === 0;
             }
 
             // grow to 100%
@@ -129,7 +130,7 @@ function doHack(ns: NS, rootedServers: Target[]) {
                 const nonzeroMoney = stateWhenGrowCompletes.money || 0.00000000001; // protect against div by 0
                 const threads = Math.ceil(ns.growthAnalyze(target.hostname, target.maxMoney / nonzeroMoney));
                 const notStartedThreads = spinUpScriptWithThreads(ns, rootedServers, target, "/bin/grow.js", threads);
-                allServersPrimed &&= notStartedThreads === 0;
+                targetPrimed &&= notStartedThreads === 0;
             }
 
             // server is primed and ready for hack to begin
@@ -142,9 +143,12 @@ function doHack(ns: NS, rootedServers: Target[]) {
                 const hackAmount = (params.hackPercent / 100) * target.maxMoney; // todo: configurable
                 const threads = Math.ceil(ns.hackAnalyzeThreads(target.hostname, hackAmount));
                 const notStartedThreads = spinUpScriptWithThreads(ns, rootedServers, target, "/bin/hack.js", threads);
-                allServersPrimed &&= notStartedThreads === 0;
+                targetPrimed &&= notStartedThreads === 0;
             }
-        });
+
+            return targetPrimed;
+        })
+        .every((targetPrimed) => targetPrimed);
 
     const hackPercentAdjustment = 1e-3;
     const oldHackPercent = params.hackPercent;

@@ -97,6 +97,7 @@ async function distributeHackFiles(ns: NS, rootedServers: Target[]) {
 
 function doHack(ns: NS, rootedServers: Target[]) {
     const logger = new Logger(ns);
+    let allServersPrimed = true;
     rootedServers
         .filter((target) => ns.getHackingLevel() >= ns.getServerRequiredHackingLevel(target.hostname))
         .filter((target) => target.maxMoney > 0)
@@ -114,9 +115,8 @@ function doHack(ns: NS, rootedServers: Target[]) {
                 while (stateWhenWeakenCompletes.security - ns.weakenAnalyze(threads) > target.minSecurity) {
                     threads++;
                 }
-                if (target.hostname.toLowerCase() === params.logHost?.toLowerCase())
-                    logger.info(`weakening ${target.hostname} with ${threads} threads`);
-                spinUpScriptWithThreads(ns, rootedServers, target, "/bin/weaken.js", threads);
+                const notStartedThreads = spinUpScriptWithThreads(ns, rootedServers, target, "/bin/weaken.js", threads);
+                allServersPrimed &&= notStartedThreads === 0;
             }
 
             // grow to 100%
@@ -128,9 +128,8 @@ function doHack(ns: NS, rootedServers: Target[]) {
             ) {
                 const nonzeroMoney = stateWhenGrowCompletes.money || 0.00000000001; // protect against div by 0
                 const threads = Math.ceil(ns.growthAnalyze(target.hostname, target.maxMoney / nonzeroMoney));
-                if (target.hostname.toLowerCase() === params.logHost?.toLowerCase())
-                    logger.info(`growing ${target.hostname} with ${threads} threads`);
-                spinUpScriptWithThreads(ns, rootedServers, target, "/bin/grow.js", threads);
+                const notStartedThreads = spinUpScriptWithThreads(ns, rootedServers, target, "/bin/grow.js", threads);
+                allServersPrimed &&= notStartedThreads === 0;
             }
 
             // server is primed and ready for hack to begin
@@ -142,11 +141,23 @@ function doHack(ns: NS, rootedServers: Target[]) {
             ) {
                 const hackAmount = (params.hackPercent / 100) * target.maxMoney; // todo: configurable
                 const threads = Math.ceil(ns.hackAnalyzeThreads(target.hostname, hackAmount));
-                if (target.hostname.toLowerCase() === params.logHost?.toLowerCase())
-                    logger.info(`hacking ${target.hostname} with ${threads} threads`);
-                spinUpScriptWithThreads(ns, rootedServers, target, "/bin/hack.js", threads);
+                const notStartedThreads = spinUpScriptWithThreads(ns, rootedServers, target, "/bin/hack.js", threads);
+                allServersPrimed &&= notStartedThreads === 0;
             }
         });
+
+    const hackPercentAdjustment = 1e-3;
+    const oldHackPercent = params.hackPercent;
+    if (allServersPrimed) {
+        params.hackPercent += hackPercentAdjustment;
+        params.hackPercent = Math.min(50, params.hackPercent);
+    } else {
+        params.hackPercent -= hackPercentAdjustment;
+        params.hackPercent = Math.max(1, params.hackPercent);
+    }
+    if (!params.hackPercent.toString().includes(".") && params.hackPercent !== oldHackPercent) {
+        logger.trace("hack percent has now reached", params.hackPercent);
+    }
 }
 
 function spinUpScriptWithThreads(
@@ -166,7 +177,7 @@ function spinUpScriptWithThreads(
 
     const ramPerThread = ns.getScriptRam(scriptname);
     for (const server of rootedServers) {
-        if (totalThreads <= 0) return;
+        if (totalThreads <= 0) return 0;
 
         const serverMaxRam = ns.getServerMaxRam(server.hostname) - (server.hostname === "home" ? homeReserveRam : 0);
         const serverRamAvailable = serverMaxRam - ns.getServerUsedRam(server.hostname);
@@ -188,6 +199,7 @@ function spinUpScriptWithThreads(
 
         totalThreads -= threads;
     }
+    return totalThreads;
 }
 
 function getServerStateAtTime(

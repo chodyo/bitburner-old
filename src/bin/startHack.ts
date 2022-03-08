@@ -150,7 +150,7 @@ function doHack(ns: NS, rootedServers: Target[]) {
         })
         .every((targetPrimed) => targetPrimed);
 
-    const hackPercentAdjustment = 1e-3;
+    const hackPercentAdjustment = 1e-4;
     const oldHackPercent = params.hackPercent;
     if (allServersPrimed) {
         params.hackPercent += hackPercentAdjustment;

@@ -159,8 +159,8 @@ function doHack(ns: NS, rootedServers: Target[]) {
         params.hackPercent -= hackPercentAdjustment;
         params.hackPercent = Math.max(1, params.hackPercent);
     }
-    if (!params.hackPercent.toString().includes(".") && params.hackPercent !== oldHackPercent) {
-        logger.trace("hack percent has now reached", params.hackPercent);
+    if (Math.floor(oldHackPercent) !== Math.floor(params.hackPercent)) {
+        logger.trace("hack percent has now reached", Math.round(params.hackPercent));
     }
 }
 

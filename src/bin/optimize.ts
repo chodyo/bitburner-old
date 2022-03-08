@@ -36,7 +36,7 @@ export async function main(ns: NS) {
             await ns.sleep(5);
         }
 
-        const secondaryScripts = activeScripts.filter((script) => !script.runFast);
+        const secondaryScripts = activeScripts.filter((script) => !script.runOnce && !script.runFast);
         for (const secondaryScript of secondaryScripts) {
             await runTerminatingScript(ns, secondaryScript);
             await ns.sleep(2 * 1000); // give me a chance to check out other script logs
@@ -47,8 +47,8 @@ export async function main(ns: NS) {
 function startScript(ns: NS, script: { name: string; args?: string[] }) {
     const logger = new Logger(ns);
 
-    const runningScript = ns.getRunningScript(script.name, "home");
-    if (!runningScript) {
+    const runningScript = ns.getRunningScript(script.name, "home", ...(script.args ? script.args : []));
+    if (!runningScript?.pid) {
         const pid = ns.run(script.name, 1, ...(script.args ? script.args : []));
         if (!pid) {
             logger.toast(`optimize failed to run ${script.name} - recommend temporarily disabling it`);

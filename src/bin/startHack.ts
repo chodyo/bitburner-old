@@ -6,7 +6,7 @@ import { StartHackParams } from "/lib/StartHack";
 
 let params: StartHackParams = {
     logHost: "nobody",
-    hackPercent: 8,
+    hackPercent: 1,
 };
 
 export async function main(ns: NS) {

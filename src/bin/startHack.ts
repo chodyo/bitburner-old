@@ -114,7 +114,7 @@ function doHack(ns: NS, rootedServers: Target[]) {
                 while (stateWhenWeakenCompletes.security - ns.weakenAnalyze(threads) > target.minSecurity) {
                     threads++;
                 }
-                if (target.hostname === params.logHost)
+                if (target.hostname.toLowerCase() === params.logHost?.toLowerCase())
                     logger.info(`weakening ${target.hostname} with ${threads} threads`);
                 spinUpScriptWithThreads(ns, rootedServers, target, "/bin/weaken.js", threads);
             }
@@ -128,7 +128,7 @@ function doHack(ns: NS, rootedServers: Target[]) {
             ) {
                 const nonzeroMoney = stateWhenGrowCompletes.money || 0.00000000001; // protect against div by 0
                 const threads = Math.ceil(ns.growthAnalyze(target.hostname, target.maxMoney / nonzeroMoney));
-                if (target.hostname === params.logHost)
+                if (target.hostname.toLowerCase() === params.logHost?.toLowerCase())
                     logger.info(`growing ${target.hostname} with ${threads} threads`);
                 spinUpScriptWithThreads(ns, rootedServers, target, "/bin/grow.js", threads);
             }
@@ -142,7 +142,7 @@ function doHack(ns: NS, rootedServers: Target[]) {
             ) {
                 const hackAmount = (params.hackPercent / 100) * target.maxMoney; // todo: configurable
                 const threads = Math.ceil(ns.hackAnalyzeThreads(target.hostname, hackAmount));
-                if (target.hostname === params.logHost)
+                if (target.hostname.toLowerCase() === params.logHost?.toLowerCase())
                     logger.info(`hacking ${target.hostname} with ${threads} threads`);
                 spinUpScriptWithThreads(ns, rootedServers, target, "/bin/hack.js", threads);
             }
@@ -180,7 +180,7 @@ function spinUpScriptWithThreads(
         // out of ram?
         if (!pid) continue;
 
-        if (target.hostname === params.logHost) {
+        if (target.hostname.toLowerCase() === params.logHost?.toLowerCase()) {
             logger.trace(
                 `started=${pid} script=${scriptname} on server=${server.hostname} against target=${target.hostname} threads=${threads}`
             );

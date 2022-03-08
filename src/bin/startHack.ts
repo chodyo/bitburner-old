@@ -127,8 +127,12 @@ function doHack(ns: NS, rootedServers: Target[]) {
                 stateWhenGrowCompletes.money < target.maxMoney &&
                 stateWhenGrowCompletes.security <= target.minSecurity
             ) {
-                const nonzeroMoney = stateWhenGrowCompletes.money || 0.00000000001; // protect against div by 0
-                const threads = Math.ceil(ns.growthAnalyze(target.hostname, target.maxMoney / nonzeroMoney));
+                const nonzeroMoney = stateWhenGrowCompletes.money || 1e-10; // protect against div by 0
+                const growthFactor = (target.maxMoney - nonzeroMoney) / nonzeroMoney + 1;
+                const threads = Math.ceil(ns.growthAnalyze(target.hostname, growthFactor));
+                if (target.hostname.toLowerCase() === params.logHost?.toLowerCase()) {
+                    logger.trace(`growthFactor=${growthFactor} resulted in threads=${threads}`);
+                }
                 const notStartedThreads = spinUpScriptWithThreads(ns, rootedServers, target, "/bin/grow.js", threads);
                 targetPrimed &&= notStartedThreads === 0;
             }

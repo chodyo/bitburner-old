@@ -27,10 +27,7 @@ export async function main(ns: NS) {
 
         const runOnceScripts = activeScripts.filter((script) => script.runOnce);
         for (const script of runOnceScripts) {
-            const runningScript = ns.getRunningScript(script.name, "home");
-            if (!runningScript) {
-                startScript(ns, script);
-            }
+            startScript(ns, script);
         }
 
         const runFastScripts = activeScripts.filter((script) => script.runFast);
@@ -50,9 +47,12 @@ export async function main(ns: NS) {
 function startScript(ns: NS, script: { name: string; args?: string[] }) {
     const logger = new Logger(ns);
 
-    const pid = ns.run(script.name, 1, ...(script.args ? script.args : []));
-    if (!pid) {
-        logger.toast(`optimize failed to run ${script.name} - recommend temporarily disabling it`);
+    const runningScript = ns.getRunningScript(script.name, "home");
+    if (!runningScript) {
+        const pid = ns.run(script.name, 1, ...(script.args ? script.args : []));
+        if (!pid) {
+            logger.toast(`optimize failed to run ${script.name} - recommend temporarily disabling it`);
+        }
     }
 }
 

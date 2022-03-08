@@ -1,19 +1,37 @@
 import { NS } from "Bitburner";
 import { Logger } from "/lib/Logger";
+import { PortNumbers } from "/lib/PortNumbers";
 import { getAllRootedServers } from "/lib/Root";
+import { StartHackParams } from "/lib/StartHack";
+
+let params: StartHackParams = {
+    logHost: "nobody",
+    hackPercent: 8,
+};
 
 export async function main(ns: NS) {
     const logger = new Logger(ns);
-    logger.trace("starting");
+    logger.trace("starting params=", params);
+
+    const hackParamsPortHandle = ns.getPortHandle(PortNumbers.StartHackParams);
 
     while (true) {
+        while (!hackParamsPortHandle.empty()) {
+            const msg: StartHackParams = JSON.parse(hackParamsPortHandle.read() as string);
+            if (msg.logHost) {
+                logger.trace("updated logHost", `${params.logHost} -> ${msg.logHost}`);
+                params.logHost = msg.logHost;
+            }
+            if (msg.hackPercent) {
+                logger.trace("updated hackPercent", `${params.hackPercent} -> ${msg.hackPercent}`);
+                params.hackPercent = msg.hackPercent;
+            }
+        }
+
         const rootedServers = Array.from(getAllRootedServers(ns)).map((hostname) => new Target(ns, hostname));
-
         await distributeHackFiles(ns, rootedServers);
-
         doHack(ns, rootedServers);
-
-        await ns.sleep(5);
+        await ns.sleep(100);
     }
 }
 
@@ -24,7 +42,7 @@ class Target {
     security: number;
     money: number;
 
-    private bufferTime = 0.001;
+    private bufferTime = 0.1;
 
     constructor(ns: NS, hostname: string) {
         this.ns = ns;
@@ -79,7 +97,6 @@ async function distributeHackFiles(ns: NS, rootedServers: Target[]) {
 
 function doHack(ns: NS, rootedServers: Target[]) {
     const logger = new Logger(ns);
-    const toastHost = "noToast";
     rootedServers
         .filter((target) => ns.getHackingLevel() >= ns.getServerRequiredHackingLevel(target.hostname))
         .filter((target) => target.maxMoney > 0)
@@ -93,12 +110,13 @@ function doHack(ns: NS, rootedServers: Target[]) {
             const stateWhenWeakenCompletes = getServerStateAtTime(ns, rootedServers, target, target.weakenTime);
             // logger.trace("weakenTime", target.weakenTime, "after weaken", stateWhenWeakenCompletes);
             if (stateWhenWeakenCompletes.security > target.minSecurity) {
-                let threads = 0;
-                while (target.security - ns.weakenAnalyze(threads) > target.minSecurity) {
+                let threads = 1;
+                while (stateWhenWeakenCompletes.security - ns.weakenAnalyze(threads) > target.minSecurity) {
                     threads++;
                 }
+                if (target.hostname === params.logHost)
+                    logger.info(`weakening ${target.hostname} with ${threads} threads`);
                 spinUpScriptWithThreads(ns, rootedServers, target, "/bin/weaken.js", threads);
-                if (target.hostname === toastHost) logger.toast(`weakening ${toastHost} with ${threads} threads`);
             }
 
             // grow to 100%
@@ -108,10 +126,11 @@ function doHack(ns: NS, rootedServers: Target[]) {
                 stateWhenGrowCompletes.money < target.maxMoney &&
                 stateWhenGrowCompletes.security <= target.minSecurity
             ) {
-                const nonzeroMoney = target.money || 0.00000000001; // protect against div by 0
+                const nonzeroMoney = stateWhenGrowCompletes.money || 0.00000000001; // protect against div by 0
                 const threads = Math.ceil(ns.growthAnalyze(target.hostname, target.maxMoney / nonzeroMoney));
+                if (target.hostname === params.logHost)
+                    logger.info(`growing ${target.hostname} with ${threads} threads`);
                 spinUpScriptWithThreads(ns, rootedServers, target, "/bin/grow.js", threads);
-                if (target.hostname === toastHost) logger.toast(`growing ${toastHost} with ${threads} threads`);
             }
 
             // server is primed and ready for hack to begin
@@ -121,10 +140,11 @@ function doHack(ns: NS, rootedServers: Target[]) {
                 stateWhenHackCompletes.money >= target.maxMoney &&
                 stateWhenHackCompletes.security <= target.minSecurity
             ) {
-                const hackAmount = (15 / 100) * target.maxMoney; // todo: configurable
+                const hackAmount = (params.hackPercent / 100) * target.maxMoney; // todo: configurable
                 const threads = Math.ceil(ns.hackAnalyzeThreads(target.hostname, hackAmount));
+                if (target.hostname === params.logHost)
+                    logger.info(`hacking ${target.hostname} with ${threads} threads`);
                 spinUpScriptWithThreads(ns, rootedServers, target, "/bin/hack.js", threads);
-                if (target.hostname === toastHost) logger.toast(`hacking ${toastHost} with ${threads} threads`);
             }
         });
 }
@@ -156,9 +176,15 @@ function spinUpScriptWithThreads(
         const threads = Math.min(totalThreads, serverMaxThreads);
 
         const pid = ns.exec(scriptname, server.hostname, threads, ...["--target", target.hostname]);
-        logger.trace(
-            `started=${pid} script=${scriptname} on server=${server.hostname} against target=${target.hostname} threads=${totalThreads}`
-        );
+
+        // out of ram?
+        if (!pid) continue;
+
+        if (target.hostname === params.logHost) {
+            logger.trace(
+                `started=${pid} script=${scriptname} on server=${server.hostname} against target=${target.hostname} threads=${threads}`
+            );
+        }
 
         totalThreads -= threads;
     }
@@ -207,7 +233,7 @@ function getServerStateAtTime(
                 const oldServerMoney = result.money;
                 const hackFactor =
                     ns.formulas.hacking.hackPercent(ns.getServer(target.hostname), ns.getPlayer()) * script.threads;
-                new Logger(ns).info(`hackFactor=${hackFactor}`);
+                // new Logger(ns).info(`hackFactor=${hackFactor}`);
                 result.money -= hackFactor * result.money;
                 if (result.money !== oldServerMoney) {
                     result.security += ns.hackAnalyzeSecurity(script.threads);

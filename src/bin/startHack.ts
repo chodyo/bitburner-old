@@ -191,7 +191,7 @@ function doHack(ns: NS, rootedServers: Target[]) {
 
     // trace out hackPercent changes every half int
     if (Math.floor(oldHackPercent * 2) !== Math.floor(params.hackPercent * 2)) {
-        logger.trace("hack percent has now reached", Math.round(params.hackPercent));
+        logger.trace("hack percent has now reached", Math.round(params.hackPercent * 2) / 2);
     }
 }
 

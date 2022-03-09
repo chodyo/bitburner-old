@@ -9,13 +9,13 @@ const params: StartHackParams = {
     hackPercent: 8,
 };
 
-let primedServers = new Set<string>();
+let primedServers = new Map<string, boolean>();
 
 export async function main(ns: NS) {
     const logger = new Logger(ns);
     logger.trace("starting params=", params);
 
-    primedServers = new Set<string>();
+    primedServers = new Map<string, boolean>();
 
     const hackParamsPortHandle = ns.getPortHandle(PortNumbers.StartHackParams);
 
@@ -110,83 +110,97 @@ function doHack(ns: NS, rootedServers: Target[]) {
         .filter((target) => ns.getHackingLevel() >= ns.getServerRequiredHackingLevel(target.hostname))
         .filter((target) => target.maxMoney > 0)
         .filter((target) => target.hostname !== "home")
-        .sort((a, b) => a.maxMoney - b.maxMoney);
-    // .slice(0, 10)
+        .sort((a, b) => a.maxMoney - b.maxMoney)
+        // .slice(0, 10)
+        .map((target) => {
+            // logger.trace("now", target.toString());
 
-    let target: Target | undefined = undefined;
-    for (let i = 0; i < targets.length; i++) {
-        target = targets[i];
-        // logger.trace("now", target.toString());
-
-        // weaken to min
-        const stateWhenWeakenCompletes = getServerStateAtTime(ns, rootedServers, target, target.weakenTime);
-        // logger.trace("weakenTime", target.weakenTime, "after weaken", stateWhenWeakenCompletes);
-        if (stateWhenWeakenCompletes.security > target.minSecurity) {
-            let threads = 1;
-            while (stateWhenWeakenCompletes.security - ns.weakenAnalyze(threads) > target.minSecurity) {
-                threads++;
+            // weaken to min
+            const stateWhenWeakenCompletes = getServerStateAtTime(ns, rootedServers, target, target.weakenTime);
+            // logger.trace("weakenTime", target.weakenTime, "after weaken", stateWhenWeakenCompletes);
+            if (stateWhenWeakenCompletes.security > target.minSecurity) {
+                let threads = 1;
+                while (stateWhenWeakenCompletes.security - ns.weakenAnalyze(threads) > target.minSecurity) {
+                    threads++;
+                }
+                const notStartedThreads = spinUpScriptWithThreads(ns, rootedServers, target, "/bin/weaken.js", threads);
+                if (notStartedThreads > 0) {
+                    return { hostname: target.hostname, primed: false, leftover: true };
+                }
             }
-            const notStartedThreads = spinUpScriptWithThreads(ns, rootedServers, target, "/bin/weaken.js", threads);
-            if (notStartedThreads > 0) break;
-        }
 
-        // grow to 100%
-        const stateWhenGrowCompletes = getServerStateAtTime(ns, rootedServers, target, target.growTime);
-        // logger.trace("growTime", target.growTime, "after grow", stateWhenGrowCompletes);
-        if (stateWhenGrowCompletes.money < target.maxMoney && stateWhenGrowCompletes.security <= target.minSecurity) {
-            const nonzeroMoney = stateWhenGrowCompletes.money || 1e-10; // protect against div by 0
-            const growthFactor = (target.maxMoney - nonzeroMoney) / nonzeroMoney + 1;
-            const threads = Math.ceil(ns.growthAnalyze(target.hostname, growthFactor));
-            // if (target.hostname.toLowerCase() === params.logHost?.toLowerCase()) {
-            //     logger.trace(`growthFactor=${growthFactor} resulted in threads=${threads}`);
-            // }
-            const notStartedThreads = spinUpScriptWithThreads(ns, rootedServers, target, "/bin/grow.js", threads);
-            if (notStartedThreads > 0) break;
-        }
+            // grow to 100%
+            const stateWhenGrowCompletes = getServerStateAtTime(ns, rootedServers, target, target.growTime);
+            // logger.trace("growTime", target.growTime, "after grow", stateWhenGrowCompletes);
+            if (
+                stateWhenGrowCompletes.money < target.maxMoney &&
+                stateWhenGrowCompletes.security <= target.minSecurity
+            ) {
+                const nonzeroMoney = stateWhenGrowCompletes.money || 1e-10; // protect against div by 0
+                const growthFactor = (target.maxMoney - nonzeroMoney) / nonzeroMoney + 1;
+                const threads = Math.ceil(ns.growthAnalyze(target.hostname, growthFactor));
+                // if (target.hostname.toLowerCase() === params.logHost?.toLowerCase()) {
+                //     logger.trace(`growthFactor=${growthFactor} resulted in threads=${threads}`);
+                // }
+                const notStartedThreads = spinUpScriptWithThreads(ns, rootedServers, target, "/bin/grow.js", threads);
+                if (notStartedThreads > 0) {
+                    return { hostname: target.hostname, primed: false, leftover: true };
+                }
+            }
 
-        if (!primedServers.has(target.hostname)) {
-            logger.info(`${target.hostname} is now primed`);
-            primedServers.add(target.hostname);
-        }
+            // server is primed and ready for hack to begin
+            const stateWhenHackCompletes = getServerStateAtTime(ns, rootedServers, target, target.hackTime);
+            // logger.trace("hackTime", target.hackTime, "after hack", stateWhenHackCompletes);
+            if (
+                stateWhenHackCompletes.money >= target.maxMoney &&
+                stateWhenHackCompletes.security <= target.minSecurity
+            ) {
+                const hackAmount = (params.hackPercent / 100) * target.maxMoney; // todo: configurable
+                const threads = Math.ceil(ns.hackAnalyzeThreads(target.hostname, hackAmount));
+                const notStartedThreads = spinUpScriptWithThreads(ns, rootedServers, target, "/bin/hack.js", threads);
+                return { hostname: target.hostname, primed: true, leftover: notStartedThreads > 0 };
+            }
 
-        // server is primed and ready for hack to begin
-        const stateWhenHackCompletes = getServerStateAtTime(ns, rootedServers, target, target.hackTime);
-        // logger.trace("hackTime", target.hackTime, "after hack", stateWhenHackCompletes);
-        if (stateWhenHackCompletes.money >= target.maxMoney && stateWhenHackCompletes.security <= target.minSecurity) {
-            const hackAmount = (params.hackPercent / 100) * target.maxMoney; // todo: configurable
-            const threads = Math.ceil(ns.hackAnalyzeThreads(target.hostname, hackAmount));
-            const notStartedThreads = spinUpScriptWithThreads(ns, rootedServers, target, "/bin/hack.js", threads);
-            if (notStartedThreads > 0) break;
-        }
+            // used to indicate this target finished all work
+            return { hostname: target.hostname, primed: undefined, leftover: false };
+        })
+        .map((target) => {
+            if (target.primed && !primedServers.get(target.hostname)) {
+                logger.info(`${target.hostname} is now primed`);
+            }
+            primedServers.set(target.hostname, target.primed || primedServers.get(target.hostname) || false); // in case primed is undefined
+            return {
+                hostname: target.hostname,
+                primed: primedServers.get(target.hostname) || false,
+                leftover: target.leftover,
+            };
+        });
 
-        // used to indicate this target finished all work
-        target = undefined;
+    // automatically adjust logs to show which target we're priming
+    // or if they're all primed, keep an eye on the biggest server (the last to be primed)
+    const unprimed = targets.filter((target) => !target.primed);
+    if (unprimed.length > 0) {
+        updateLogHost(ns, unprimed[0].hostname);
+    } else {
+        updateLogHost(ns, targets[targets.length - 1].hostname);
     }
+
+    const hadLeftoverWork = targets.some((target) => target.leftover);
 
     const hackPercentAdjustment = 1e-4;
     const oldHackPercent = params.hackPercent;
-
-    // target is only undefined if we had enough threads to complete all tasks for every potential target
-    if (target === undefined) {
+    // we only want to up the hack percent if every target is primed
+    // and there's no leftover work that needs to be done
+    if (unprimed.length === 0 && !hadLeftoverWork) {
         params.hackPercent += hackPercentAdjustment;
         params.hackPercent = Math.min(50, params.hackPercent);
     }
 
-    // target is only set when we ran out of threads to do any particular task
-    // indicates we don't have enough ram for hacking, i.e. not all servers are primed
-    if (target) {
+    // we only want to reduce the hack percent if we had work that couldn't be allocated
+    // because we ran out of ram
+    if (hadLeftoverWork) {
         params.hackPercent -= hackPercentAdjustment;
         params.hackPercent = Math.max(1, params.hackPercent);
-    }
-
-    // automatically adjust logs to show which target we're priming
-    if (target && primedServers.size !== targets.length) {
-        updateLogHost(ns, target.hostname);
-    }
-
-    // keep an eye on the biggest server (the last to be primed)
-    if (primedServers.size === targets.length) {
-        updateLogHost(ns, targets[targets.length - 1].hostname);
     }
 
     // trace out hackPercent changes every half int

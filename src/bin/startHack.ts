@@ -42,7 +42,12 @@ class Target {
     security: number;
     money: number;
 
-    private bufferTime = 0.1;
+    // https://bitburner.readthedocs.io/en/latest/advancedgameplay/hackingalgorithms.html#batch-algorithms-hgw-hwgw-or-cycles
+    // Depending on your computer’s performance as well as a few other factors,
+    // the necessary delay between script execution times may range between 20ms and 200ms,
+    // you want to fine-tune this value to be as low as possible while also avoiding your scripts finishing out of order.
+    // Anything lower than 20ms will not work due to javascript limitations.
+    private bufferTime = 0.02;
 
     constructor(ns: NS, hostname: string) {
         this.ns = ns;
@@ -98,73 +103,75 @@ async function distributeHackFiles(ns: NS, rootedServers: Target[]) {
 function doHack(ns: NS, rootedServers: Target[]) {
     const logger = new Logger(ns);
 
-    const allServersPrimed = rootedServers
+    const targets = rootedServers
         .filter((target) => ns.getHackingLevel() >= ns.getServerRequiredHackingLevel(target.hostname))
         .filter((target) => target.maxMoney > 0)
         .filter((target) => target.hostname !== "home")
-        .sort((a, b) => a.maxMoney - b.maxMoney)
-        // .slice(0, 10)
-        .map((target) => {
-            // logger.trace("now", target.toString());
-            let targetPrimed = false;
+        .sort((a, b) => a.maxMoney - b.maxMoney);
+    // .slice(0, 10)
 
-            // weaken to min
-            const stateWhenWeakenCompletes = getServerStateAtTime(ns, rootedServers, target, target.weakenTime);
-            // logger.trace("weakenTime", target.weakenTime, "after weaken", stateWhenWeakenCompletes);
-            if (stateWhenWeakenCompletes.security > target.minSecurity) {
-                let threads = 1;
-                while (stateWhenWeakenCompletes.security - ns.weakenAnalyze(threads) > target.minSecurity) {
-                    threads++;
-                }
-                const notStartedThreads = spinUpScriptWithThreads(ns, rootedServers, target, "/bin/weaken.js", threads);
-                targetPrimed ||= notStartedThreads === 0;
+    let target: Target | undefined;
+    for (let i = 0; i < targets.length; i++) {
+        target = targets[i];
+        // logger.trace("now", target.toString());
+
+        // weaken to min
+        const stateWhenWeakenCompletes = getServerStateAtTime(ns, rootedServers, target, target.weakenTime);
+        // logger.trace("weakenTime", target.weakenTime, "after weaken", stateWhenWeakenCompletes);
+        if (stateWhenWeakenCompletes.security > target.minSecurity) {
+            let threads = 1;
+            while (stateWhenWeakenCompletes.security - ns.weakenAnalyze(threads) > target.minSecurity) {
+                threads++;
             }
+            const notStartedThreads = spinUpScriptWithThreads(ns, rootedServers, target, "/bin/weaken.js", threads);
+            if (notStartedThreads > 0) break;
+        }
 
-            // grow to 100%
-            const stateWhenGrowCompletes = getServerStateAtTime(ns, rootedServers, target, target.growTime);
-            // logger.trace("growTime", target.growTime, "after grow", stateWhenGrowCompletes);
-            if (
-                stateWhenGrowCompletes.money < target.maxMoney &&
-                stateWhenGrowCompletes.security <= target.minSecurity
-            ) {
-                const nonzeroMoney = stateWhenGrowCompletes.money || 1e-10; // protect against div by 0
-                const growthFactor = (target.maxMoney - nonzeroMoney) / nonzeroMoney + 1;
-                const threads = Math.ceil(ns.growthAnalyze(target.hostname, growthFactor));
-                if (target.hostname.toLowerCase() === params.logHost?.toLowerCase()) {
-                    logger.trace(`growthFactor=${growthFactor} resulted in threads=${threads}`);
-                }
-                const notStartedThreads = spinUpScriptWithThreads(ns, rootedServers, target, "/bin/grow.js", threads);
-                targetPrimed &&= notStartedThreads === 0;
+        // grow to 100%
+        const stateWhenGrowCompletes = getServerStateAtTime(ns, rootedServers, target, target.growTime);
+        // logger.trace("growTime", target.growTime, "after grow", stateWhenGrowCompletes);
+        if (stateWhenGrowCompletes.money < target.maxMoney && stateWhenGrowCompletes.security <= target.minSecurity) {
+            const nonzeroMoney = stateWhenGrowCompletes.money || 1e-10; // protect against div by 0
+            const growthFactor = (target.maxMoney - nonzeroMoney) / nonzeroMoney + 1;
+            const threads = Math.ceil(ns.growthAnalyze(target.hostname, growthFactor));
+            if (target.hostname.toLowerCase() === params.logHost?.toLowerCase()) {
+                logger.trace(`growthFactor=${growthFactor} resulted in threads=${threads}`);
             }
+            const notStartedThreads = spinUpScriptWithThreads(ns, rootedServers, target, "/bin/grow.js", threads);
+            if (notStartedThreads > 0) break;
+        }
 
-            // server is primed and ready for hack to begin
-            const stateWhenHackCompletes = getServerStateAtTime(ns, rootedServers, target, target.hackTime);
-            // logger.trace("hackTime", target.hackTime, "after hack", stateWhenHackCompletes);
-            if (
-                stateWhenHackCompletes.money >= target.maxMoney &&
-                stateWhenHackCompletes.security <= target.minSecurity
-            ) {
-                const hackAmount = (params.hackPercent / 100) * target.maxMoney; // todo: configurable
-                const threads = Math.ceil(ns.hackAnalyzeThreads(target.hostname, hackAmount));
-                const notStartedThreads = spinUpScriptWithThreads(ns, rootedServers, target, "/bin/hack.js", threads);
-                targetPrimed &&= notStartedThreads === 0;
-            }
+        // server is primed and ready for hack to begin
+        const stateWhenHackCompletes = getServerStateAtTime(ns, rootedServers, target, target.hackTime);
+        // logger.trace("hackTime", target.hackTime, "after hack", stateWhenHackCompletes);
+        if (stateWhenHackCompletes.money >= target.maxMoney && stateWhenHackCompletes.security <= target.minSecurity) {
+            const hackAmount = (params.hackPercent / 100) * target.maxMoney; // todo: configurable
+            const threads = Math.ceil(ns.hackAnalyzeThreads(target.hostname, hackAmount));
+            const notStartedThreads = spinUpScriptWithThreads(ns, rootedServers, target, "/bin/hack.js", threads);
+            if (notStartedThreads > 0) break;
+        }
 
-            return targetPrimed;
-        })
-        .every((targetPrimed) => targetPrimed);
+        target = undefined;
+    }
 
     const hackPercentAdjustment = 1e-4;
     const oldHackPercent = params.hackPercent;
-    if (allServersPrimed) {
-        params.hackPercent += hackPercentAdjustment;
-        params.hackPercent = Math.min(50, params.hackPercent);
-    } else {
+    if (target) {
+        // indicates we don't have enough ram for hacking, i.e. not all servers are primed
         params.hackPercent -= hackPercentAdjustment;
         params.hackPercent = Math.max(1, params.hackPercent);
+
+        // automatically adjust logs to show which target we're priming
+        params.logHost = target.hostname;
+    } else {
+        params.hackPercent += hackPercentAdjustment;
+        params.hackPercent = Math.min(50, params.hackPercent);
     }
     if (Math.floor(oldHackPercent) !== Math.floor(params.hackPercent)) {
         logger.trace("hack percent has now reached", Math.round(params.hackPercent));
+        if (target) {
+            logger.trace("priming server for hacking", target.hostname);
+        }
     }
 }
 

@@ -106,6 +106,8 @@ async function distributeHackFiles(ns: NS, rootedServers: Target[]) {
 function doHack(ns: NS, rootedServers: Target[]) {
     const logger = new Logger(ns);
 
+    let previousTargetIsPrimed = true;
+
     const targets = rootedServers
         .filter((target) => ns.getHackingLevel() >= ns.getServerRequiredHackingLevel(target.hostname))
         .filter((target) => target.maxMoney > 0)
@@ -114,6 +116,16 @@ function doHack(ns: NS, rootedServers: Target[]) {
         // .slice(0, 10)
         .map((target) => {
             // logger.trace("now", target.toString());
+
+            // shortcut to prevent trying to spin up worker threads for a machine later in the list
+            // i want to laser focus as much work as possible on the machines in order because
+            // once a machine is primed, it takes very little compute and rewards a lot of cash.
+            // only work on a machine if i know that every other target before it has already been fully primed.
+            if (!previousTargetIsPrimed) {
+                return { hostname: target.hostname, primed: false, leftover: false };
+            }
+            // let later servers know that i am primed or not
+            previousTargetIsPrimed = primedServers.get(target.hostname) || false;
 
             // weaken to min
             const stateWhenWeakenCompletes = getServerStateAtTime(ns, rootedServers, target, target.weakenTime);
@@ -157,8 +169,8 @@ function doHack(ns: NS, rootedServers: Target[]) {
             ) {
                 const hackAmount = (params.hackPercent / 100) * target.maxMoney; // todo: configurable
                 const threads = Math.ceil(ns.hackAnalyzeThreads(target.hostname, hackAmount));
-                const notStartedThreads = spinUpScriptWithThreads(ns, rootedServers, target, "/bin/hack.js", threads);
-                return { hostname: target.hostname, primed: true, leftover: notStartedThreads > 0 };
+                const leftoverThreads = spinUpScriptWithThreads(ns, rootedServers, target, "/bin/hack.js", threads) > 0;
+                return { hostname: target.hostname, primed: true, leftover: leftoverThreads };
             }
 
             // used to indicate this target finished all work

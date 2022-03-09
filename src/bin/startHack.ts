@@ -4,14 +4,18 @@ import { PortNumbers } from "/lib/PortNumbers";
 import { getAllRootedServers } from "/lib/Root";
 import { StartHackParams } from "/lib/StartHack";
 
-let params: StartHackParams = {
+const params: StartHackParams = {
     logHost: "nobody",
     hackPercent: 8,
 };
 
+let primedServers = new Set<string>();
+
 export async function main(ns: NS) {
     const logger = new Logger(ns);
     logger.trace("starting params=", params);
+
+    primedServers = new Set<string>();
 
     const hackParamsPortHandle = ns.getPortHandle(PortNumbers.StartHackParams);
 
@@ -19,8 +23,7 @@ export async function main(ns: NS) {
         while (!hackParamsPortHandle.empty()) {
             const msg: StartHackParams = JSON.parse(hackParamsPortHandle.read() as string);
             if (msg.logHost) {
-                logger.trace("updated logHost", `${params.logHost} -> ${msg.logHost}`);
-                params.logHost = msg.logHost;
+                updateLogHost(ns, msg.logHost);
             }
             if (msg.hackPercent) {
                 logger.trace("updated hackPercent", `${params.hackPercent} -> ${msg.hackPercent}`);
@@ -110,7 +113,7 @@ function doHack(ns: NS, rootedServers: Target[]) {
         .sort((a, b) => a.maxMoney - b.maxMoney);
     // .slice(0, 10)
 
-    let target: Target | undefined;
+    let target: Target | undefined = undefined;
     for (let i = 0; i < targets.length; i++) {
         target = targets[i];
         // logger.trace("now", target.toString());
@@ -134,11 +137,16 @@ function doHack(ns: NS, rootedServers: Target[]) {
             const nonzeroMoney = stateWhenGrowCompletes.money || 1e-10; // protect against div by 0
             const growthFactor = (target.maxMoney - nonzeroMoney) / nonzeroMoney + 1;
             const threads = Math.ceil(ns.growthAnalyze(target.hostname, growthFactor));
-            if (target.hostname.toLowerCase() === params.logHost?.toLowerCase()) {
-                logger.trace(`growthFactor=${growthFactor} resulted in threads=${threads}`);
-            }
+            // if (target.hostname.toLowerCase() === params.logHost?.toLowerCase()) {
+            //     logger.trace(`growthFactor=${growthFactor} resulted in threads=${threads}`);
+            // }
             const notStartedThreads = spinUpScriptWithThreads(ns, rootedServers, target, "/bin/grow.js", threads);
             if (notStartedThreads > 0) break;
+        }
+
+        if (!primedServers.has(target.hostname)) {
+            logger.info(`${target.hostname} is now primed`);
+            primedServers.add(target.hostname);
         }
 
         // server is primed and ready for hack to begin
@@ -151,27 +159,39 @@ function doHack(ns: NS, rootedServers: Target[]) {
             if (notStartedThreads > 0) break;
         }
 
+        // used to indicate this target finished all work
         target = undefined;
     }
 
     const hackPercentAdjustment = 1e-4;
     const oldHackPercent = params.hackPercent;
-    if (target) {
-        // indicates we don't have enough ram for hacking, i.e. not all servers are primed
-        params.hackPercent -= hackPercentAdjustment;
-        params.hackPercent = Math.max(1, params.hackPercent);
 
-        // automatically adjust logs to show which target we're priming
-        params.logHost = target.hostname;
-    } else {
+    // target is only undefined if we had enough threads to complete all tasks for every potential target
+    if (target === undefined) {
         params.hackPercent += hackPercentAdjustment;
         params.hackPercent = Math.min(50, params.hackPercent);
     }
-    if (Math.floor(oldHackPercent) !== Math.floor(params.hackPercent)) {
+
+    // target is only set when we ran out of threads to do any particular task
+    // indicates we don't have enough ram for hacking, i.e. not all servers are primed
+    if (target) {
+        params.hackPercent -= hackPercentAdjustment;
+        params.hackPercent = Math.max(1, params.hackPercent);
+    }
+
+    // automatically adjust logs to show which target we're priming
+    if (target && primedServers.size !== targets.length) {
+        updateLogHost(ns, target.hostname);
+    }
+
+    // keep an eye on the biggest server (the last to be primed)
+    if (primedServers.size === targets.length) {
+        updateLogHost(ns, targets[targets.length - 1].hostname);
+    }
+
+    // trace out hackPercent changes every half int
+    if (Math.floor(oldHackPercent * 2) !== Math.floor(params.hackPercent * 2)) {
         logger.trace("hack percent has now reached", Math.round(params.hackPercent));
-        if (target) {
-            logger.trace("priming server for hacking", target.hostname);
-        }
     }
 }
 
@@ -321,4 +341,11 @@ function allScriptsAgainstTarget(ns: NS, rootedServers: Target[], target: Target
         });
         return scripts;
     });
+}
+
+function updateLogHost(ns: NS, hostname: string) {
+    if (params.logHost === hostname) return;
+
+    new Logger(ns).trace("updated logHost", `${params.logHost} -> ${hostname}`);
+    params.logHost = hostname;
 }

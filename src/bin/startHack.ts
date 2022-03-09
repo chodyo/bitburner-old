@@ -137,6 +137,10 @@ function doHack(ns: NS, rootedServers: Target[]) {
                 }
                 const notStartedThreads = spinUpScriptWithThreads(ns, rootedServers, target, "/bin/weaken.js", threads);
                 if (notStartedThreads > 0) {
+                    if (notStartedThreads !== threads)
+                        logger.trace(
+                            `${notStartedThreads} threads more until ${target.hostname} is fully weakened; security=${stateWhenWeakenCompletes.security}/${target.minSecurity}`
+                        );
                     return { hostname: target.hostname, primed: false, leftover: true };
                 }
             }
@@ -156,6 +160,10 @@ function doHack(ns: NS, rootedServers: Target[]) {
                 // }
                 const notStartedThreads = spinUpScriptWithThreads(ns, rootedServers, target, "/bin/grow.js", threads);
                 if (notStartedThreads > 0) {
+                    if (notStartedThreads !== threads)
+                        logger.trace(
+                            `${notStartedThreads} threads more until ${target.hostname} is fully grown; growthFactor=${growthFactor}`
+                        );
                     return { hostname: target.hostname, primed: false, leftover: true };
                 }
             }

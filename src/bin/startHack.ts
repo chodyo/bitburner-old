@@ -220,45 +220,19 @@ function getServerStateAtTime(
         .sort((a, b) => a.remainingTime - b.remainingTime)
         .filter((script) => script.remainingTime <= seconds);
 
-    const result = { security: target.security, money: target.money };
+    const result = { hostname: target.hostname, security: target.security, money: target.money };
 
     scripts.forEach((script) => {
         switch (script.action) {
             case "weaken":
-                result.security -= ns.weakenAnalyze(script.threads, ns.getServer(script.hostname).cpuCores);
-                result.security = Math.max(result.security, target.minSecurity);
+                updateServerStateWeaken(ns, script, result);
                 break;
             case "grow": {
-                const growthFactor = ns.formulas.hacking.growPercent(
-                    ns.getServer(target.hostname),
-                    script.threads,
-                    ns.getPlayer(),
-                    ns.getServer(script.hostname).cpuCores
-                );
-                // new Logger(ns).info(`growthFactor=${growthFactor}`);
-                const oldServerMoney = result.money;
-                // let serverGrowth = ns.getServerGrowth(target.hostname);
-                // serverGrowth = serverGrowth < 1 ? 1 : serverGrowth;
-                // result.money += 1 * script.threads;
-                // result.money *= serverGrowth;
-                result.money *= growthFactor;
-                result.money = Math.min(result.money, target.maxMoney);
-                if (result.money !== oldServerMoney) {
-                    result.security += ns.growthAnalyzeSecurity(script.threads);
-                    result.security = Math.max(result.security, target.minSecurity);
-                }
+                updateServerStateGrow(ns, script, result);
                 break;
             }
             case "hack": {
-                const oldServerMoney = result.money;
-                const hackFactor =
-                    ns.formulas.hacking.hackPercent(ns.getServer(target.hostname), ns.getPlayer()) * script.threads;
-                // new Logger(ns).info(`hackFactor=${hackFactor}`);
-                result.money -= hackFactor * result.money;
-                if (result.money !== oldServerMoney) {
-                    result.security += ns.hackAnalyzeSecurity(script.threads);
-                    result.security = Math.max(result.security, target.minSecurity);
-                }
+                updateServerStateHack(ns, script, result);
                 break;
             }
             default:
@@ -267,6 +241,52 @@ function getServerStateAtTime(
     });
 
     return result;
+}
+
+function updateServerStateWeaken(
+    ns: NS,
+    script: { hostname: string; threads: number },
+    state: { hostname: string; money: number; security: number }
+) {
+    state.security -= ns.weakenAnalyze(script.threads, ns.getServer(script.hostname).cpuCores);
+    state.security = Math.max(state.security, ns.getServerMinSecurityLevel(state.hostname));
+}
+
+function updateServerStateGrow(
+    ns: NS,
+    script: { hostname: string; threads: number },
+    state: { hostname: string; money: number; security: number }
+) {
+    const growthFactor = ns.formulas.hacking.growPercent(
+        ns.getServer(state.hostname),
+        script.threads,
+        ns.getPlayer(),
+        ns.getServer(script.hostname).cpuCores
+    );
+    // new Logger(ns).info(`growthFactor=${growthFactor}`);
+    const oldServerMoney = state.money;
+    state.money *= growthFactor;
+    state.money = Math.min(state.money, ns.getServerMaxMoney(state.hostname));
+    if (state.money !== oldServerMoney) {
+        state.security += ns.growthAnalyzeSecurity(script.threads);
+        state.security = Math.max(state.security, ns.getServerMinSecurityLevel(state.hostname));
+    }
+}
+
+function updateServerStateHack(
+    ns: NS,
+    script: { hostname: string; threads: number },
+    state: { hostname: string; money: number; security: number }
+) {
+    const oldServerMoney = state.money;
+    const hackFactor = ns.formulas.hacking.hackPercent(ns.getServer(state.hostname), ns.getPlayer()) * script.threads;
+    // new Logger(ns).info(`hackFactor=${hackFactor}`);
+    state.money -= hackFactor * state.money;
+    state.money = Math.max(state.money, 0);
+    if (state.money !== oldServerMoney) {
+        state.security += ns.hackAnalyzeSecurity(script.threads);
+        state.security = Math.max(state.security, ns.getServerMinSecurityLevel(state.hostname));
+    }
 }
 
 function allScriptsAgainstTarget(ns: NS, rootedServers: Target[], target: Target) {

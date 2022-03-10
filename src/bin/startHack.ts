@@ -153,8 +153,8 @@ function doHack(ns: NS, rootedServers: Target[]) {
             const stateWhenGrowCompletes = getServerStateAtTime(ns, rootedServers, target, target.growTime);
             // logger.trace("growTime", target.growTime, "after grow", stateWhenGrowCompletes);
             if (
-                stateWhenGrowCompletes.money < target.maxMoney &&
-                stateWhenGrowCompletes.security <= target.minSecurity
+                stateWhenGrowCompletes.money < target.maxMoney
+                // stateWhenGrowCompletes.security <= target.minSecurity
             ) {
                 const nonzeroMoney = stateWhenGrowCompletes.money || 1e-10; // protect against div by 0
                 const growthFactor = (target.maxMoney - nonzeroMoney) / nonzeroMoney + 1;
@@ -189,8 +189,16 @@ function doHack(ns: NS, rootedServers: Target[]) {
                 return { hostname: target.hostname, primed: true, leftover: leftoverThreads };
             }
 
-            // used to indicate this target finished all work
-            return { hostname: target.hostname, primed: undefined, leftover: false };
+            const stateWhenWeakenAndGrowCompletes = getServerStateAtTime(
+                ns,
+                rootedServers,
+                target,
+                Math.max(target.weakenTime, target.growTime)
+            );
+            let primed =
+                stateWhenWeakenAndGrowCompletes.money >= target.maxMoney &&
+                stateWhenWeakenAndGrowCompletes.security <= target.minSecurity;
+            return { hostname: target.hostname, primed: primed, leftover: false };
         })
         .map((target) => {
             if (target.primed && !primedServers.get(target.hostname)) {

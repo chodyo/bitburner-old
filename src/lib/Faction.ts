@@ -385,7 +385,10 @@ async function induceFactionInvite(ns: NS) {
     const augs = unownedUninstalledAugmentsFromFactions(ns, ...Factions.values().map((f) => f.name))
         .sort((a, b) => b.repreq - a.repreq)
         .filter((aug, i, arr) => i === arr.findIndex((v) => v.faction === aug.faction))
-        .sort((a, b) => a.repreq - b.repreq);
+        .sort((a, b) => a.repreq - b.repreq)
+        .filter((aug) => aug.faction !== Megacorporations.KuaiGong.name) // str, agi, defense
+        .filter((aug) => aug.faction !== Megacorporations.MegaCorp.name) // combat skills/exp
+        .filter((aug) => aug.faction !== CityFactions.NewTokyo.name); // combat exp
 
     if (augs.length === 0) {
         logger.trace("no augs available in any factions");

@@ -282,7 +282,8 @@ export function getEnoughRep(ns: NS) {
 
     const canUnlockDonos = ns.getFactionFavor(faction) + ns.getFactionFavorGain(faction) >= ns.getFavorToDonate();
     if (!donosUnlocked && canUnlockDonos) {
-        installAugs(ns);
+        // buy any available augs
+        return true;
     }
 
     return hackForFaction(ns, faction, repreq);
@@ -302,11 +303,15 @@ export function buyAugs(ns: NS) {
     const playerAugs = ns.getOwnedAugmentations(includePurchased);
 
     // figure out what needs buying
-    const augs = unownedUninstalledAugmentsFromFactions(ns, ...ns.getPlayer().factions).sort((a, b) => {
-        if (a.prereqs.includes(b.name)) return 1;
-        if (b.prereqs.includes(a.name)) return -1;
-        return b.price - a.price;
-    });
+    const augs = unownedUninstalledAugmentsFromFactions(ns, ...ns.getPlayer().factions)
+        // e.g. if the program wants to reset to unlock donations,
+        // it should still install whatever augs it can get its filthy digital hands on
+        .filter((aug) => aug.repreq <= ns.getFactionRep(aug.faction))
+        .sort((a, b) => {
+            if (a.prereqs.includes(b.name)) return 1;
+            if (b.prereqs.includes(a.name)) return -1;
+            return b.price - a.price;
+        });
 
     // already bought everything
     if (augs.length === 0) {

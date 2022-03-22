@@ -222,7 +222,10 @@ class Megacorporations extends Factions {
 export async function joinFactionWithAugsToBuy(ns: NS) {
     const logger = new Logger(ns);
 
-    const augsAvailableFromJoinedFactions = unownedUninstalledAugmentsFromFactions(ns, ...ns.getPlayer().factions);
+    const augsAvailableFromJoinedFactions = unownedUninstalledAugmentsFromFactions(
+        ns,
+        ...ns.getPlayer().factions
+    ).filter((aug) => aug.faction !== "Bladeburners"); // not sure how to deal with this yet
     if (augsAvailableFromJoinedFactions.length > 0) {
         logger.trace(
             `${augsAvailableFromJoinedFactions.length} augs available from faction that i already joined`,
@@ -252,7 +255,8 @@ export function getEnoughRep(ns: NS) {
     // highest rep requirement of all augs for all factions i've already joined
     const augs = unownedUninstalledAugmentsFromFactions(ns, ...ns.getPlayer().factions)
         .filter((aug) => ns.getFactionRep(aug.faction) < aug.repreq)
-        .sort((a, b) => b.repreq - a.repreq);
+        .sort((a, b) => b.repreq - a.repreq)
+        .filter((aug) => aug.faction !== "Bladeburners"); // not sure how to deal with this yet
 
     if (augs.length === 0) {
         return true;
@@ -374,7 +378,8 @@ function unownedUninstalledAugmentsFromFactions(ns: NS, ...factions: string[]) {
             }))
         )
         .filter((aug) => !playerAugs.includes(aug.name))
-        .filter((aug) => aug.name !== infinitelyUpgradableAug);
+        .filter((aug) => aug.name !== infinitelyUpgradableAug)
+        .filter((aug) => aug.faction != "Bladeburners"); // todo: this will probably need rework
 }
 
 async function induceFactionInvite(ns: NS) {
@@ -385,10 +390,7 @@ async function induceFactionInvite(ns: NS) {
     const augs = unownedUninstalledAugmentsFromFactions(ns, ...Factions.values().map((f) => f.name))
         .sort((a, b) => b.repreq - a.repreq)
         .filter((aug, i, arr) => i === arr.findIndex((v) => v.faction === aug.faction))
-        .sort((a, b) => a.repreq - b.repreq)
-        .filter((aug) => aug.faction !== Megacorporations.KuaiGong.name) // str, agi, defense
-        .filter((aug) => aug.faction !== Megacorporations.MegaCorp.name) // combat skills/exp
-        .filter((aug) => aug.faction !== CityFactions.NewTokyo.name); // combat exp
+        .sort((a, b) => a.repreq - b.repreq);
 
     if (augs.length === 0) {
         logger.trace("no augs available in any factions");
@@ -409,6 +411,7 @@ function hackForFaction(ns: NS, factionName: string, repThreshold: number) {
     const earned = ns.getPlayer().workRepGained;
     if (current + earned >= repThreshold) {
         ns.stopAction();
+        return true;
     }
 
     const currentFactionName = ns.getPlayer().currentWorkFactionName;

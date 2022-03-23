@@ -169,7 +169,12 @@ function doHack(ns: NS, rootedServers: Target[]) {
                         params.logHost?.toLowerCase() === target.hostname.toLowerCase()
                     ) {
                         logger.trace(
-                            `${notStartedThreads} threads more until ${target.hostname} is fully grown; growthFactor=${growthFactor}`
+                            `${notStartedThreads} threads more until ${
+                                target.hostname
+                            } is fully grown; growthFactor=${growthFactor} (${ns.nFormat(
+                                nonzeroMoney,
+                                "($0.00a)"
+                            )}/${ns.nFormat(target.maxMoney, "($0.00a)")})`
                         );
                     }
                     return { hostname: target.hostname, primed: false, leftover: true };

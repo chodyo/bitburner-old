@@ -271,18 +271,20 @@ export function getEnoughRep(ns: NS) {
     const remainder = repreq - total;
 
     const donosUnlocked = ns.getFactionFavor(faction) >= ns.getFavorToDonate();
-    // https://github.com/danielyxie/bitburner/blob/f5386acc17de63b66530fc6aad8f911c451663f6/src/Faction/formulas/donation.ts#L5
-    // https://github.com/danielyxie/bitburner/blob/f5386acc17de63b66530fc6aad8f911c451663f6/src/Constants.ts#L141
-    const donoAmount = Math.ceil((remainder * 1e6) / ns.getPlayer().faction_rep_mult);
-    const enoughCashToReachRepGoal = ns.getServerMoneyAvailable("home") >= donoAmount;
 
     if (remainder && donosUnlocked) {
+        // https://github.com/danielyxie/bitburner/blob/f5386acc17de63b66530fc6aad8f911c451663f6/src/Faction/formulas/donation.ts#L5
+        // https://github.com/danielyxie/bitburner/blob/f5386acc17de63b66530fc6aad8f911c451663f6/src/Constants.ts#L141
+        const donoAmount = Math.ceil((remainder * 1e6) / ns.getPlayer().faction_rep_mult);
+        const enoughCashToReachRepGoal = ns.getServerMoneyAvailable("home") >= donoAmount;
         ns.donateToFaction(faction, enoughCashToReachRepGoal ? donoAmount : ns.getServerMoneyAvailable("home") / 3);
     }
 
-    const canUnlockDonos = ns.getFactionFavor(faction) + ns.getFactionFavorGain(faction) >= ns.getFavorToDonate();
+    const totalFavor = 1 + Math.log((total + 25000) / 25500) / Math.log(1.02);
+    const canUnlockDonos = totalFavor >= ns.getFavorToDonate();
     if (!donosUnlocked && canUnlockDonos) {
         // buy any available augs
+        ns.stopAction();
         return true;
     }
 

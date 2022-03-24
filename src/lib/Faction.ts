@@ -63,6 +63,7 @@ abstract class Factions {
             ...CityFactions.values(),
             ...HackingGroups.values(),
             ...Megacorporations.values(),
+            ...EndgameFactions.values(),
         ];
     }
 
@@ -216,6 +217,49 @@ class Megacorporations extends Factions {
 
     static values(): Factions[] {
         return Object.values(Megacorporations);
+    }
+}
+
+class EndgameFactions extends Factions {
+    // 20 augs, $75b, hacking lvl 850, all combat stats 850
+    static readonly Covenant = new EndgameFactions("Covenant", {
+        name: "The Covenant",
+        special: (ns) => {
+            // hacking to 850 will be taken care of by hack/grow/weaken
+
+            const player = ns.getPlayer();
+            const firstLowStat = [
+                { name: "Strength", value: player.strength },
+                { name: "Defense", value: player.defense },
+                { name: "Dexterity", value: player.dexterity },
+                { name: "Agility", value: player.agility },
+            ]
+                .filter((stat) => stat.value < 850)
+                .shift();
+
+            if (firstLowStat) {
+                const gym = "Powerhouse Gym";
+                ns.gymWorkout(gym, firstLowStat.name);
+                return false;
+            }
+
+            return true;
+        },
+    });
+
+    // 30 augs, $100b, hacking 2500 or combat stats 1500
+    static readonly Daedalus = new EndgameFactions("Daedalus", { name: "Daedalus" });
+
+    // 30 augs, $150b, hacking 1500 or combat stats 1200
+    static readonly Illuminati = new EndgameFactions("Illuminati", { name: "Illuminati" });
+
+    // private to disallow creating other instances of this type
+    private constructor(readonly key: string, readonly value: Faction) {
+        super(key, value);
+    }
+
+    static values(): Factions[] {
+        return Object.values(EndgameFactions);
     }
 }
 

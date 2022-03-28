@@ -112,8 +112,18 @@ function doHack(ns: NS, rootedServers: Target[]) {
         .filter((target) => ns.getHackingLevel() >= ns.getServerRequiredHackingLevel(target.hostname))
         .filter((target) => target.maxMoney > 0)
         .filter((target) => target.hostname !== "home")
-        .filter((target) => target.hostname !== "fulcrumassets") // security is way too high and growth is way too low
-        .sort((a, b) => a.maxMoney - b.maxMoney)
+        .sort((a, b) => {
+            // most servers have a similar setup - proportionally low or high max money, growth, and security
+            // "fulcrumassets" has way too much security for comparatively little gain.
+            if (a.hostname === "fulcrumassets") {
+                return 1;
+            }
+            if (b.hostname === "fulcrumassets") {
+                return -1;
+            }
+
+            return a.maxMoney - b.maxMoney;
+        })
         // .slice(0, 10)
         .map((target) => {
             // logger.trace("now", target.toString());

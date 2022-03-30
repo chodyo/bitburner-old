@@ -1,6 +1,5 @@
 import { NS } from "Bitburner";
 import { Logger } from "/lib/Logger";
-import { desiredSavings } from "/lib/Money";
 import { sendControlMsg } from "/lib/Optimize";
 
 export async function main(ns: NS) {
@@ -45,7 +44,7 @@ function buyHomeUpgrade(ns: NS) {
         lowestUpgradeFn = ns.upgradeHomeRam;
     }
 
-    if (ns.getServerMoneyAvailable("home") < lowestCost + desiredSavings(ns, 30)) {
+    if (ns.getServerMoneyAvailable("home") < lowestCost) {
         return false;
     }
 

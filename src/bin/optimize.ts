@@ -3,7 +3,7 @@ import { Logger } from "/lib/Logger";
 import { ScriptResult } from "/lib/Optimize";
 import { PortNumbers } from "/lib/PortNumbers";
 
-const scriptsThatCostMeMoney = ["/bin/darkweb.js", "/bin/hacknet.js", "/bin/home.js", "/bin/pserv.js"];
+const scriptsThatCostMeMoney = ["/bin/hacknet.js", "/bin/home.js", "/bin/pserv.js"];
 
 export async function main(ns: NS) {
     const logger = new Logger(ns);
@@ -18,6 +18,7 @@ export async function main(ns: NS) {
         { name: "/bin/darkweb.js", active: true },
         { name: "/bin/pserv.js", active: true },
         { name: "/bin/hacknet.js", active: true },
+        { name: "/bin/bladeburner.js", active: true },
     ];
 
     while (scripts.some((script) => script.active)) {

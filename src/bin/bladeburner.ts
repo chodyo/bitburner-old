@@ -3,7 +3,9 @@ import { Logger } from "/lib/Logger";
 
 class BladeburnerActions {
     static readonly Training = new BladeburnerActions("Training", "General");
+    static readonly Analysis = new BladeburnerActions("Field Analysis", "General");
     static readonly Regen = new BladeburnerActions("Hyperbolic Regeneration Chamber", "General");
+
     static readonly Tracking = new BladeburnerActions("Tracking", "Contract");
 
     // private to disallow creating other instances of this type
@@ -33,7 +35,21 @@ function burnBlades(ns: NS) {
 
     const runActionResult = runBladeburnerActions(ns);
 
-    return runActionResult;
+    const skillResult = allocateSkillPoints(ns);
+
+    return false;
+}
+
+function allocateSkillPoints(ns: NS) {
+    ns.bladeburner.upgradeSkill("Blade's Intuition");
+    ns.bladeburner.upgradeSkill("Cloak");
+    ns.bladeburner.upgradeSkill("Tracer");
+    ns.bladeburner.upgradeSkill("Overclock");
+    ns.bladeburner.upgradeSkill("Reaper");
+    ns.bladeburner.upgradeSkill("Evasive System");
+    ns.bladeburner.upgradeSkill("Hands of Midas");
+
+    return false;
 }
 
 function runBladeburnerActions(ns: NS) {
@@ -50,8 +66,14 @@ function runBladeburnerActions(ns: NS) {
         BladeburnerActions.Tracking.type,
         BladeburnerActions.Tracking.name
     );
+
     // 60% low end chosen at random
     if (successLow < 0.6) {
+        if (successHigh - successLow > 0.1) {
+            const startedAnalysis = startAction(ns, BladeburnerActions.Analysis);
+            logger.trace("started analysis", startedAnalysis);
+            return false;
+        }
         const startedTraining = startAction(ns, BladeburnerActions.Training);
         logger.trace("started training", startedTraining);
         return false;

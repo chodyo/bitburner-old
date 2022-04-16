@@ -350,6 +350,8 @@ export function buyAugs(ns: NS) {
 
     // figure out what needs buying
     const augs = unownedUninstalledAugmentsFromFactions(ns, ...ns.getPlayer().factions)
+        // not sure how to deal with this yet
+        .filter((aug) => aug.faction !== "Bladeburners")
         // e.g. if the program wants to reset to unlock donations,
         // it should still install whatever augs it can get its filthy digital hands on
         .filter((aug) => aug.repreq <= ns.getFactionRep(aug.faction))
@@ -386,6 +388,58 @@ export function buyAugs(ns: NS) {
     return augs.length === 0;
 }
 
+export function buyBladeburnerAugs(ns: NS) {
+    const logger = new Logger(ns);
+
+    if (!ns.getPlayer().factions.includes("Bladeburner")) {
+        return true;
+    }
+
+    // once the price mult gets too high, i don't think it's worth it to wait too long to buy BB augs
+    // count chosen at random, should probably be adjusted
+    const queuedAugsCount = ns.getOwnedAugmentations(true).length - ns.getOwnedAugmentations(false).length;
+    if (queuedAugsCount > 12) {
+        return true;
+    }
+
+    const augs = unownedUninstalledAugmentsFromFactions(ns, "Bladeburners")
+        .filter((aug) => aug.repreq <= ns.getFactionRep(aug.faction))
+        .sort((a, b) => {
+            // even though this aug is super good, it's super expensive
+            if (a.name === "The Blade's Simulacrum") return 1;
+            if (b.name === "The Blade's Simulacrum") return -1;
+
+            // if b is a prereq of a, a needs to shift +
+            if (a.prereqs.includes(b.name)) return 1;
+            // if a is a prereq of b, a needs to shift -
+            if (b.prereqs.includes(a.name)) return -1;
+
+            return b.price - a.price;
+        });
+
+    if (augs.length === 0) {
+        return true;
+    }
+
+    while (augs.length > 0 && augs[0] && ns.getAugmentationPrice(augs[0].name) <= ns.getServerMoneyAvailable("home")) {
+        const aug = augs.shift();
+        if (aug === undefined) {
+            throw new Error("tried to buy an augmentation but wasn't able to pop off the front of the list");
+        }
+        if (!ns.purchaseAugmentation(aug.faction, aug.name)) {
+            throw new Error(
+                `tried to buy an aug but failed ${aug.faction} ${aug.name} ${aug.price} ${ns.getServerMoneyAvailable(
+                    "home"
+                )}`
+            );
+        }
+        logger.info(`bought ${aug.faction} ${aug.name}`);
+    }
+
+    logger.info("leftover augs", augs);
+    return augs.length === 0;
+}
+
 export function buyNeuroFluxGovernor(ns: NS) {
     const logger = new Logger(ns);
 
@@ -418,7 +472,7 @@ function unownedUninstalledAugmentsFromFactions(ns: NS, ...factions: string[]) {
     const purchasedAndInstalled = true;
     const playerAugs = ns.getOwnedAugmentations(purchasedAndInstalled);
 
-    return factions
+    const leftoverAugs = factions
         .flatMap((faction) =>
             ns.getAugmentationsFromFaction(faction).map((aug) => ({
                 faction: faction,
@@ -429,8 +483,14 @@ function unownedUninstalledAugmentsFromFactions(ns: NS, ...factions: string[]) {
             }))
         )
         .filter((aug) => !playerAugs.includes(aug.name))
-        .filter((aug) => aug.name !== infinitelyUpgradableAug)
-        .filter((aug) => aug.faction != "Bladeburners"); // todo: this will probably need rework
+        .filter((aug) => aug.name !== infinitelyUpgradableAug);
+
+    // only include bladeburner augs if we're explicitly asking for them
+    if (factions.length === 1 && factions.includes("Bladeburners")) {
+        return leftoverAugs;
+    }
+
+    return leftoverAugs.filter((aug) => aug.faction != "Bladeburners");
 }
 
 async function induceFactionInvite(ns: NS) {

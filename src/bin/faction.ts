@@ -5,6 +5,7 @@ import {
     getEnoughRep,
     saveMoney,
     buyAugs,
+    buyBladeburnerAugs,
     buyNeuroFluxGovernor,
     installAugs,
 } from "/lib/Faction";
@@ -30,6 +31,9 @@ export async function main(ns: NS) {
             break;
         case "buyAugs":
             if (buyAugs(ns)) sendControlMsg(ns, getControlMsg(state));
+            break;
+        case "buyBladeburnerAugs":
+            if (buyBladeburnerAugs(ns)) sendControlMsg(ns, getControlMsg(state));
             break;
         case "buyNeuroFluxGovernor":
             if (buyNeuroFluxGovernor(ns)) sendControlMsg(ns, getControlMsg(state));
@@ -58,6 +62,9 @@ function getControlMsg(state: string): ScriptResult {
             nextState = "buyAugs";
             break;
         case "buyAugs":
+            nextState = "buyBladeburnerAugs";
+            break;
+        case "buyBladeburnerAugs":
             nextState = "buyNeuroFluxGovernor";
             break;
         case "buyNeuroFluxGovernor":

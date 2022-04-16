@@ -39,9 +39,7 @@ function buyAllDarkwebUpgrades(ns: NS) {
         return false;
     }
 
-    if (ns.purchaseTor()) {
-        logger.toast("bought tor router");
-    }
+    ns.purchaseTor();
 
     const minutesOfSavings = 30;
     const savings = desiredSavings(ns, minutesOfSavings);

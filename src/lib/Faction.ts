@@ -391,13 +391,19 @@ export function buyAugs(ns: NS) {
 export function buyBladeburnerAugs(ns: NS) {
     const logger = new Logger(ns);
 
+    ns.alert("bladeburner aug start");
+
     if (!ns.getPlayer().factions.includes("Bladeburner")) {
+        ns.alert("not in bladeburner");
         return true;
     }
 
     // once the price mult gets too high, i don't think it's worth it to wait too long to buy BB augs
     // count chosen at random, should probably be adjusted
-    const queuedAugsCount = ns.getOwnedAugmentations(true).length - ns.getOwnedAugmentations(false).length;
+    const allAugs = ns.getOwnedAugmentations(true).length;
+    const installedAugs = ns.getOwnedAugmentations(false).length;
+    const queuedAugsCount = allAugs - installedAugs;
+    ns.alert(`augs ${allAugs} - ${installedAugs} = ${queuedAugsCount}`);
     if (queuedAugsCount > 12) {
         return true;
     }
@@ -418,6 +424,7 @@ export function buyBladeburnerAugs(ns: NS) {
         });
 
     if (augs.length === 0) {
+        ns.alert("no more bladeburner augs to buy");
         return true;
     }
 
@@ -437,7 +444,7 @@ export function buyBladeburnerAugs(ns: NS) {
     }
 
     logger.info("leftover augs", augs);
-    return augs.length === 0;
+    return augs.length === 0 || augs[0].name === "The Blade's Simulacrum";
 }
 
 export function buyNeuroFluxGovernor(ns: NS) {

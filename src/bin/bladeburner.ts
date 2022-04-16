@@ -28,6 +28,8 @@ abstract class Actions {
 }
 
 class General extends Actions {
+    static readonly Idle = new General("", "Idle");
+
     static readonly Training = new General("Training", "General");
     static readonly Analysis = new General("Field Analysis", "General");
     static readonly Recruitment = new General("Recruitment", "General");
@@ -114,9 +116,10 @@ export async function main(ns: NS) {
 function burnBlades(ns: NS) {
     const logger = new Logger(ns);
 
-    const work = ns.getPlayer().currentWorkFactionName;
-    if (work && work !== "Bladeburners") {
-        logger.trace("skipping bladeburners becauses i'm working for", work);
+    if (ns.getPlayer().isWorking) {
+        const place = ns.getPlayer().currentWorkFactionName || ns.getPlayer().companyName;
+        const job = ns.getPlayer().currentWorkFactionDescription;
+        logger.trace("skipping bladeburners becauses i'm working for", place, job);
         return false;
     }
 
@@ -166,14 +169,9 @@ function runBladeburnerActions(ns: NS) {
     //     return false;
     // }
 
-    const [successLow, successHigh] = ns.bladeburner.getActionEstimatedSuccessChance(
-        Contracts.Tracking.type,
-        Contracts.Tracking.name
-    );
-
     // 60% low end chosen at random
-    if (successLow < 0.6) {
-        if (successHigh - successLow > 0.1) {
+    if (Contracts.Tracking.low(ns) < 60) {
+        if (Contracts.Tracking.high(ns) - Contracts.Tracking.low(ns) > 10) {
             const startedAnalysis = General.Analysis.start(ns);
             logger.trace("started analysis", startedAnalysis);
             return false;
@@ -192,7 +190,7 @@ function runBladeburnerActions(ns: NS) {
         return false;
     }
 
-    if (stamPercent > 95) {
+    if (stamPercent > 95 || bladeBurnerAction.type === General.Idle.type) {
         const availableContracts = Contracts.values().filter((contract) => contract.count(ns) > 0);
         if (availableContracts.length === 0) {
             const startedInciting = General.Incite.start(ns);

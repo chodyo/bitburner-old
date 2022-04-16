@@ -63,6 +63,7 @@ abstract class Factions {
             ...CityFactions.values(),
             ...HackingGroups.values(),
             ...Megacorporations.values(),
+            ...CriminalOrgs.values(),
             ...EndgameFactions.values(),
         ];
     }
@@ -83,7 +84,7 @@ abstract class Factions {
         return ready;
     }
 
-    private async backdoor(ns: NS): Promise<boolean> {
+    async backdoor(ns: NS): Promise<boolean> {
         const hostname = this.value.backdoorHostname;
         if (!hostname) return false;
 
@@ -217,6 +218,20 @@ class Megacorporations extends Factions {
 
     static values(): Factions[] {
         return Object.values(Megacorporations);
+    }
+}
+
+class CriminalOrgs extends Factions {
+    static readonly Snakes = new CriminalOrgs("Snakes", { name: "Slum Snakes" });
+    static readonly Tetrads = new CriminalOrgs("Tetrads", { name: "Tetrads", city: "Chongqing" });
+
+    // private to disallow creating other instances of this type
+    private constructor(readonly key: string, readonly value: Faction) {
+        super(key, value);
+    }
+
+    static values(): Factions[] {
+        return Object.values(CriminalOrgs);
     }
 }
 
@@ -538,21 +553,30 @@ function hackForFaction(ns: NS, factionName: string, repThreshold: number) {
     return ns.getFactionRep(factionName) >= repThreshold;
 }
 
-function workForCorp(ns: NS, corpName: string, repThreshold: number) {
-    ns.applyToCompany(corpName, "Software");
-    if (ns.getPlayer().companyName !== corpName) return false;
+async function workForCorp(ns: NS, corpName: string, repThreshold: number) {
+    const logger = new Logger(ns);
+
+    const player = ns.getPlayer();
 
     const current = ns.getCompanyRep(corpName);
-    if (current >= repThreshold) return true;
+    const earned = player.workRepGained;
+    const backdoored = await isCorpBackdoored(ns, corpName);
+    const wouldReceive = backdoored ? (earned * 3) / 4 : earned / 2;
 
-    const currentWorkName = ns.getPlayer().currentWorkFactionName;
-    if (!currentWorkName || currentWorkName !== corpName) ns.workForCompany(corpName);
-
-    const earned = ns.getPlayer().workRepGained;
-    if (current + earned / 2 >= repThreshold) {
+    if (current + wouldReceive >= repThreshold) {
         ns.stopAction();
         return true;
     }
 
+    // if (player.companyName !== corpName) {
+    const applied = ns.applyToCompany(corpName, "Software");
+    logger.trace("applied to", corpName, applied);
+    // }
+
     return false;
+}
+
+async function isCorpBackdoored(ns: NS, corpName: string): Promise<boolean> {
+    const faction = Megacorporations.from(corpName) as Megacorporations;
+    return await faction.backdoor(ns);
 }

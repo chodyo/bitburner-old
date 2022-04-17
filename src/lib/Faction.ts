@@ -573,6 +573,7 @@ async function workForCorp(ns: NS, corpName: string, repThreshold: number) {
     const logger = new Logger(ns);
 
     const player = ns.getPlayer();
+    // logger.trace("player", player);
 
     const current = ns.getCompanyRep(corpName);
     const earned = player.workRepGained;
@@ -582,6 +583,12 @@ async function workForCorp(ns: NS, corpName: string, repThreshold: number) {
     if (current + wouldReceive >= repThreshold) {
         ns.stopAction();
         return true;
+    }
+
+    if (!player.workType || player.workType !== "Working for Company") {
+        const isWorking = ns.workForCompany(corpName);
+        logger.trace("working for", corpName, isWorking);
+        return false;
     }
 
     // if (player.companyName !== corpName) {

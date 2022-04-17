@@ -222,7 +222,17 @@ class Megacorporations extends Factions {
 }
 
 class CriminalOrgs extends Factions {
-    static readonly Snakes = new CriminalOrgs("Snakes", { name: "Slum Snakes" });
+    static farmKarma(ns: NS): boolean {
+        if (ns.getPlayer().crimeType) {
+            return false;
+        }
+
+        ns.commitCrime("Homicide");
+
+        return false;
+    }
+
+    static readonly Snakes = new CriminalOrgs("Snakes", { name: "Slum Snakes", special: this.farmKarma });
     static readonly Tetrads = new CriminalOrgs("Tetrads", { name: "Tetrads", city: "Chongqing" });
 
     // private to disallow creating other instances of this type
@@ -408,8 +418,8 @@ export function buyBladeburnerAugs(ns: NS) {
 
     ns.alert("bladeburner aug start");
 
-    if (!ns.getPlayer().factions.includes("Bladeburner")) {
-        ns.alert("not in bladeburner");
+    if (!ns.getPlayer().factions.includes("Bladeburners")) {
+        ns.alert("not in bladeburners");
         return true;
     }
 
@@ -548,7 +558,9 @@ function hackForFaction(ns: NS, factionName: string, repThreshold: number) {
     }
 
     const currentFactionName = ns.getPlayer().currentWorkFactionName;
-    if (!currentFactionName || currentFactionName !== factionName) ns.workForFaction(factionName, "hacking");
+    if (!currentFactionName || currentFactionName !== factionName) {
+        ["hacking", "field work", "security"].some((workType) => ns.workForFaction(factionName, workType));
+    }
 
     return ns.getFactionRep(factionName) >= repThreshold;
 }

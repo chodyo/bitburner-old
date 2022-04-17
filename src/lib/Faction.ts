@@ -233,7 +233,11 @@ class CriminalOrgs extends Factions {
     }
 
     static readonly Snakes = new CriminalOrgs("Snakes", { name: "Slum Snakes", special: this.farmKarma });
-    static readonly Tetrads = new CriminalOrgs("Tetrads", { name: "Tetrads", city: "Chongqing" });
+    static readonly Tetrads = new CriminalOrgs("Tetrads", {
+        name: "Tetrads",
+        city: "Chongqing",
+        special: this.farmKarma,
+    });
 
     // private to disallow creating other instances of this type
     private constructor(readonly key: string, readonly value: Faction) {

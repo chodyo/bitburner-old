@@ -420,10 +420,7 @@ export function buyAugs(ns: NS) {
 export function buyBladeburnerAugs(ns: NS) {
     const logger = new Logger(ns);
 
-    ns.alert("bladeburner aug start");
-
     if (!ns.getPlayer().factions.includes("Bladeburners")) {
-        ns.alert("not in bladeburners");
         return true;
     }
 
@@ -432,7 +429,6 @@ export function buyBladeburnerAugs(ns: NS) {
     const allAugs = ns.getOwnedAugmentations(true).length;
     const installedAugs = ns.getOwnedAugmentations(false).length;
     const queuedAugsCount = allAugs - installedAugs;
-    ns.alert(`augs ${allAugs} - ${installedAugs} = ${queuedAugsCount}`);
     if (queuedAugsCount > 12) {
         return true;
     }
@@ -453,7 +449,6 @@ export function buyBladeburnerAugs(ns: NS) {
         });
 
     if (augs.length === 0) {
-        ns.alert("no more bladeburner augs to buy");
         return true;
     }
 

@@ -25,6 +25,10 @@ abstract class Actions {
     high(ns: NS): number {
         return ns.bladeburner.getActionEstimatedSuccessChance(this.type, this.name)[1] * 100;
     }
+
+    level(ns: NS): number {
+        return ns.bladeburner.getActionCurrentLevel(this.type, this.name);
+    }
 }
 
 class General extends Actions {
@@ -131,6 +135,12 @@ function burnBlades(ns: NS) {
 }
 
 function allocateSkillPoints(ns: NS) {
+    // at some point i stop caring about success and just want to go fast
+    if (!Skills.Overclock.isMaxed(ns) && Contracts.Tracking.level(ns) > 50) {
+        Skills.Overclock.upgrade(ns);
+        if (Contracts.Tracking.low(ns) > 60) return;
+    }
+
     Skills.Reaper.upgrade(ns);
     Skills.Evasive.upgrade(ns);
 
@@ -170,8 +180,10 @@ function runBladeburnerActions(ns: NS) {
     // }
 
     // 60% low end chosen at random
-    if (Contracts.Tracking.low(ns) < 60) {
-        if (Contracts.Tracking.high(ns) - Contracts.Tracking.low(ns) > 10) {
+    const low = Contracts.Tracking.low(ns);
+    if (low < 60) {
+        const high = Contracts.Tracking.high(ns);
+        if (high < 70 && high - low > 10) {
             const startedAnalysis = General.Analysis.start(ns);
             logger.trace("started analysis", startedAnalysis);
             return false;

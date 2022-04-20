@@ -179,11 +179,11 @@ function runBladeburnerActions(ns: NS) {
     //     return false;
     // }
 
-    // 60% low end chosen at random
+    // 70% low end chosen at random
     const low = Contracts.Tracking.low(ns);
-    if (low < 60) {
+    if (low < 70) {
         const high = Contracts.Tracking.high(ns);
-        if (high < 70 && high - low > 10) {
+        if (high - low > 10) {
             const startedAnalysis = General.Analysis.start(ns);
             logger.trace("started analysis", startedAnalysis);
             return false;

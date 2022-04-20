@@ -580,16 +580,16 @@ async function workForCorp(ns: NS, corpName: string, repThreshold: number) {
         return true;
     }
 
+    if (player.companyName !== corpName) {
+        const applied = ns.applyToCompany(corpName, "Software");
+        logger.trace("applied to", corpName, applied);
+    }
+
     if (!player.workType || player.workType !== "Working for Company") {
         const isWorking = ns.workForCompany(corpName);
         logger.trace("working for", corpName, isWorking);
         return false;
     }
-
-    // if (player.companyName !== corpName) {
-    const applied = ns.applyToCompany(corpName, "Software");
-    logger.trace("applied to", corpName, applied);
-    // }
 
     return false;
 }

@@ -85,6 +85,7 @@ abstract class Factions {
     }
 
     async backdoor(ns: NS): Promise<boolean> {
+        const logger = new Logger(ns);
         const hostname = this.value.backdoorHostname;
         if (!hostname) return false;
 
@@ -98,8 +99,10 @@ abstract class Factions {
             throw new Error(`failed to connect to backdoor ${hostname}`);
         }
 
+        logger.info("installing backdoor");
         await ns.installBackdoor();
 
+        logger.info("returning terminal to previous server");
         const returnedHome = connect(ns, currentServer);
         if (!returnedHome) {
             throw new Error(`backdoored ${hostname} but failed to return home`);
@@ -580,10 +583,11 @@ async function workForCorp(ns: NS, corpName: string, repThreshold: number) {
         return true;
     }
 
-    if (player.companyName !== corpName) {
-        const applied = ns.applyToCompany(corpName, "Software");
-        logger.trace("applied to", corpName, applied);
-    }
+    // todo: sometimes i might need to stop working to accrue rep so i can make the next promotion
+    // if (player.companyName !== corpName) {
+    const applied = ns.applyToCompany(corpName, "Software");
+    logger.trace("applied to", corpName, applied);
+    // }
 
     if (!player.workType || player.workType !== "Working for Company") {
         const isWorking = ns.workForCompany(corpName);
@@ -595,6 +599,12 @@ async function workForCorp(ns: NS, corpName: string, repThreshold: number) {
 }
 
 async function isCorpBackdoored(ns: NS, corpName: string): Promise<boolean> {
-    const faction = Megacorporations.from(corpName) as Megacorporations;
-    return await faction.backdoor(ns);
+    // sometimes backdooring can take a while - we don't want to clobber another process doing the same thing
+    if (ns.isRunning(ns.getScriptName(), ns.getHostname(), ...ns.args.map((arg) => arg.toString()))) {
+        return false;
+    }
+
+    const corp = Megacorporations.from(corpName) as Megacorporations;
+    const corpBackdoored = await corp.backdoor(ns);
+    return corpBackdoored;
 }

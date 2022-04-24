@@ -170,7 +170,8 @@ export async function main(ns: NS) {
 function burnBlades(ns: NS) {
     const logger = new Logger(ns);
 
-    if (!ns.getPlayer().factions.includes("Bladeburners")) {
+    const joined = ns.bladeburner.joinBladeburnerDivision();
+    if (!joined) {
         logger.trace("skipping bladeburners becauses i haven't joined");
         return false;
     }

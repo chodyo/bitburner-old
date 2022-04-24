@@ -19,6 +19,7 @@ export async function main(ns: NS) {
         { name: "/bin/pserv.js", active: true },
         { name: "/bin/hacknet.js", active: true },
         { name: "/bin/bladeburner.js", active: true },
+        { name: "/bin/wallst.js", active: false },
     ];
 
     while (scripts.some((script) => script.active)) {

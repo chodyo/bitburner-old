@@ -20,6 +20,7 @@ export async function main(ns: NS) {
         { name: "/bin/hacknet.js", active: true },
         { name: "/bin/bladeburner.js", active: true },
         { name: "/bin/wallst.js", active: false },
+        { name: "/bin/gang.js", active: true },
     ];
 
     while (scripts.some((script) => script.active)) {
@@ -41,7 +42,7 @@ export async function main(ns: NS) {
         const secondaryScripts = activeScripts.filter((script) => !script.runOnce && !script.runFast);
         for (const secondaryScript of secondaryScripts) {
             await runTerminatingScript(ns, secondaryScript);
-            await ns.sleep(2 * 1000); // give me a chance to check out other script logs
+            await ns.sleep(2 * 100); // give me a chance to check out other script logs
         }
     }
 }

@@ -253,42 +253,74 @@ function optimizeGangMemberTasks(ns: NS) {
     // wanted penalty is the multiplier
     // e.g. profits * wantedPenalty = actualProfits
     if (gangInfo.wantedPenalty < 0.7) {
-        members.forEach((name) => {
-            ns.gang.setMemberTask(name, "Vigilante Justice");
-        });
+        members.forEach((name) => setMemberTaskByGoal(ns, name, "less wanted"));
         return;
     }
 
     // gang not full, gain respect
     if (ns.gang.getMemberNames().length < 12) {
-        members.forEach((name) => ns.gang.setMemberTask(name, "Terrorism"));
+        members.forEach((name) => setMemberTaskByGoal(ns, name, "respect"));
         return;
     }
 
     // territory power too low
     if (!territoryWarfare(ns)) {
-        members.forEach((name) => ns.gang.setMemberTask(name, "Territory Warfare"));
+        members.forEach((name) => setMemberTaskByGoal(ns, name, "territory"));
         return;
     }
 
     // make money
-    const tasks = ns.gang.getTaskNames();
-    members.forEach((name) => {
-        const memberTaskProfits = tasks
-            .map((taskName) => {
-                ns.gang.setMemberTask(name, taskName);
-                return { taskName: taskName, profits: ns.gang.getMemberInformation(name).moneyGain };
-            })
-            .sort((a, b) => b.profits - a.profits)
-            .filter((task) => task.profits > 0);
+    members.forEach((name) => setMemberTaskByGoal(ns, name, "money"));
+}
 
-        if (memberTaskProfits.length === 0) {
-            ns.gang.setMemberTask(name, "Train Combat");
-            return;
-        }
+function setMemberTaskByGoal(
+    ns: NS,
+    memberName: string,
+    goal: "money" | "territory" | "respect" | "less wanted"
+): boolean {
+    if (goal === "territory") {
+        return ns.gang.setMemberTask(memberName, "Territory Warfare");
+    }
 
-        ns.gang.setMemberTask(name, memberTaskProfits[0].taskName);
+    if (goal === "less wanted") {
+        return ns.gang.setMemberTask(memberName, "Vigilante Justice");
+    }
+
+    const taskResults = ns.gang.getTaskNames().map((taskName) => {
+        ns.gang.setMemberTask(memberName, taskName);
+        const memberInfo = ns.gang.getMemberInformation(memberName);
+        return {
+            taskName: taskName,
+            profits: memberInfo.moneyGain,
+            respect: memberInfo.respectGain,
+        };
     });
+    switch (goal) {
+        case "money":
+            const taskWithBestProfits = taskResults
+                .filter((task) => task.profits > 0)
+                .sort((a, b) => b.profits - a.profits)[0];
+
+            if (taskWithBestProfits === undefined) {
+                return ns.gang.setMemberTask(memberName, "Train Combat");
+            }
+
+            return ns.gang.setMemberTask(memberName, taskWithBestProfits.taskName);
+
+        case "respect":
+            const taskWithBestRespect = taskResults
+                .filter((task) => task.respect > 0)
+                .sort((a, b) => b.respect - a.respect)[0];
+
+            if (taskWithBestRespect === undefined) {
+                return ns.gang.setMemberTask(memberName, "Train Combat");
+            }
+
+            return ns.gang.setMemberTask(memberName, taskWithBestRespect.taskName);
+
+        default:
+            throw new Error(`member task goal is wrong: ${goal}`);
+    }
 }
 
 function buyGangMemberEquipment(ns: NS) {

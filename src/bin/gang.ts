@@ -183,16 +183,16 @@ function generateName(): string {
 
     const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
 
-    const permutations = 4;
+    const permutations = 5;
     switch (Math.floor(Math.random() * permutations)) {
         case 0:
-            return `${color} ${firstName}`;
         case 1:
-            return `${adj} ${firstName}`;
+            return `${color} ${firstName}`;
         case 2:
-            return `${color} ${adj} ${firstName}`;
+        case 3:
+            return `${adj} ${firstName}`;
         default:
-            return `${adj} ${color} ${firstName}`;
+            return `${color} ${firstName} the ${adj}`;
     }
 }
 
@@ -225,6 +225,11 @@ function territoryWarfare(ns: NS): boolean {
 }
 
 function ascendGangMembers(ns: NS) {
+    // gang not full, respect accrues a lot faster without ascensions
+    if (ns.gang.getMemberNames().length < 12) {
+        return;
+    }
+
     ns.gang
         .getMemberNames()
         .map((name) => ({ name: name, info: ns.gang.getAscensionResult(name) || { str: 1, def: 1, dex: 1, agi: 1 } }))
@@ -234,16 +239,32 @@ function ascendGangMembers(ns: NS) {
 
 function optimizeGangMemberTasks(ns: NS) {
     // probably better to get them some base training before trying to make money
-    const membersTraining = ns.gang.getMemberNames().filter((name) => {
-        const info = ns.gang.getMemberInformation(name);
-        return info.str < 100 || info.def < 100 || info.dex < 100 || info.agi < 100;
+    const minLvl = 100;
+    const membersTraining = ns.gang
+        .getMemberNames()
+        .map((name) => {
+            const info = ns.gang.getMemberInformation(name);
+            let task: string | undefined = undefined;
+            if (info.str < minLvl || info.def < minLvl || info.dex < minLvl || info.agi < minLvl) {
+                task = "Train Combat";
+            } else if (info.hack < minLvl) {
+                task = "Train Hacking";
+            } else if (info.cha < minLvl) {
+                task = "Train Charisma";
+            }
+            return {
+                name: name,
+                task: task,
+            };
+        })
+        .filter((member) => member.task);
+
+    membersTraining.forEach((member) => {
+        if (!member.task) return;
+        ns.gang.setMemberTask(member.name, member.task);
     });
 
-    membersTraining.forEach((name) => {
-        ns.gang.setMemberTask(name, "Train Combat");
-    });
-
-    const members = ns.gang.getMemberNames().filter((name) => !membersTraining.includes(name));
+    const members = ns.gang.getMemberNames().filter((name) => !membersTraining.find((member) => member.name === name));
 
     // ns.alert(`${JSON.stringify(ns.gang.getGangInformation())}`);
 
@@ -252,7 +273,8 @@ function optimizeGangMemberTasks(ns: NS) {
     // wanted penalty too high
     // wanted penalty is the multiplier
     // e.g. profits * wantedPenalty = actualProfits
-    if (gangInfo.wantedPenalty < 0.7) {
+    // wantedLevel has a minimum value of 1
+    if (gangInfo.wantedPenalty < 0.7 && gangInfo.wantedLevel > 5) {
         members.forEach((name) => setMemberTaskByGoal(ns, name, "less wanted"));
         return;
     }

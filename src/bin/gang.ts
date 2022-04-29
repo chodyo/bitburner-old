@@ -221,7 +221,12 @@ function territoryWarfare(ns: NS): boolean {
         otherGangInfo.NiteSec.power,
         otherGangInfo["The Black Hand"].power
     );
-    return gangInfo.power > maxOtherGangPower * 2;
+
+    // hypothetically i just need enough to beat them most of the time
+    // and then my power will passively snowball as they lose and i win
+    // if it's too low every team sort of equalizes in power
+    const powerMult = 1.25;
+    return gangInfo.power > maxOtherGangPower * powerMult;
 }
 
 function ascendGangMembers(ns: NS) {
@@ -269,6 +274,13 @@ function optimizeGangMemberTasks(ns: NS) {
     // ns.alert(`${JSON.stringify(ns.gang.getGangInformation())}`);
 
     const gangInfo = ns.gang.getGangInformation();
+
+    // sometimes if every member ascends at once, respect drops back down near 0
+    // no real point in trying to adjust wanted penalty until there's some amount
+    // of base respect already built up
+    if (gangInfo.respect < 1000) {
+        members.forEach((name) => setMemberTaskByGoal(ns, name, "respect"));
+    }
 
     // wanted penalty too high
     // wanted penalty is the multiplier

@@ -85,7 +85,31 @@ function getKarmaSoHigh(ns: NS) {
     if (ns.gang.createGang(ss)) return true;
 
     ns.singularity.commitCrime("homicide");
+    sleevesHelpWithKarma(ns);
+
     return false;
+}
+
+function sleevesHelpWithKarma(ns: NS) {
+    const gym = "Powerhouse Gym";
+    Array(ns.sleeve.getNumSleeves())
+        .fill(0)
+        .map((_, sleeveNum) => ({ num: sleeveNum, stats: ns.sleeve.getSleeveStats(sleeveNum) }))
+        .forEach((sleeve) => {
+            if (sleeve.stats.strength < 50) {
+                return ns.sleeve.setToGymWorkout(sleeve.num, gym, "Strength");
+            }
+            if (sleeve.stats.defense < 50) {
+                return ns.sleeve.setToGymWorkout(sleeve.num, gym, "Defense");
+            }
+            if (sleeve.stats.dexterity < 50) {
+                return ns.sleeve.setToGymWorkout(sleeve.num, gym, "Dexterity");
+            }
+            if (sleeve.stats.agility < 50) {
+                return ns.sleeve.setToGymWorkout(sleeve.num, gym, "Agility");
+            }
+            return ns.sleeve.setToCommitCrime(sleeve.num, String.fromCharCode(72) + "omicide");
+        });
 }
 
 function generateName(): string {
@@ -197,7 +221,7 @@ function generateName(): string {
 }
 
 function manageGang(ns: NS) {
-    ns.gang.setTerritoryWarfare(territoryWarfare(ns));
+    ns.gang.setTerritoryWarfare(territoryWarfare(ns).engage);
 
     ns.gang.recruitMember(generateName());
 
@@ -210,7 +234,7 @@ function manageGang(ns: NS) {
     return false;
 }
 
-function territoryWarfare(ns: NS): boolean {
+function territoryWarfare(ns: NS): { engage: boolean; accruePower: boolean } {
     const gangInfo = ns.gang.getGangInformation();
     const otherGangInfo = ns.gang.getOtherGangInformation();
     const maxOtherGangPower = Math.max(
@@ -224,21 +248,35 @@ function territoryWarfare(ns: NS): boolean {
 
     // hypothetically i just need enough to beat them most of the time
     // and then my power will passively snowball as they lose and i win
-    // if it's too low every team sort of equalizes in power
-    const powerMult = 1.25;
-    return gangInfo.power > maxOtherGangPower * powerMult;
+    // if it's too low every team sort of equalizes in power.
+    // 1.25 was pretty good but it resulted in almost all the gangs
+    // accumulating power off each other so try grinding them into dust
+    // so i never have to maintain power
+    const powerMult = 2;
+    return {
+        engage: gangInfo.power > maxOtherGangPower,
+        accruePower: gangInfo.power < maxOtherGangPower * powerMult,
+    };
 }
 
 function ascendGangMembers(ns: NS) {
-    // gang not full, respect accrues a lot faster without ascensions
-    if (ns.gang.getMemberNames().length < 12) {
-        return;
-    }
-
     ns.gang
         .getMemberNames()
-        .map((name) => ({ name: name, info: ns.gang.getAscensionResult(name) || { str: 1, def: 1, dex: 1, agi: 1 } }))
-        .filter((member) => member.info.str > 2 || member.info.def > 2 || member.info.dex > 2 || member.info.agi > 2)
+        .map((name) => ({
+            name: name,
+            stats: ns.gang.getAscensionResult(name) || { str: 1, def: 1, dex: 1, agi: 1 },
+            respect: ns.gang.getMemberInformation(name).earnedRespect,
+        }))
+        .filter(
+            (member) => member.stats.str > 2 || member.stats.def > 2 || member.stats.dex > 2 || member.stats.agi > 2
+        )
+        .filter((member) => {
+            // if we're still recruiting members then we don't want to lose large chunks of respect
+            if (ns.gang.getMemberNames().length < 12) {
+                return member.respect < 1000;
+            }
+            return true;
+        })
         .forEach((member) => ns.gang.ascendMember(member.name));
 }
 
@@ -278,8 +316,9 @@ function optimizeGangMemberTasks(ns: NS) {
     // sometimes if every member ascends at once, respect drops back down near 0
     // no real point in trying to adjust wanted penalty until there's some amount
     // of base respect already built up
-    if (gangInfo.respect < 1000) {
+    if (gangInfo.respect < 200 && gangInfo.wantedPenalty > 0.2) {
         members.forEach((name) => setMemberTaskByGoal(ns, name, "respect"));
+        return;
     }
 
     // wanted penalty too high
@@ -298,7 +337,7 @@ function optimizeGangMemberTasks(ns: NS) {
     }
 
     // territory power too low
-    if (!territoryWarfare(ns)) {
+    if (territoryWarfare(ns).accruePower) {
         members.forEach((name) => setMemberTaskByGoal(ns, name, "territory"));
         return;
     }
@@ -358,10 +397,13 @@ function setMemberTaskByGoal(
 }
 
 function buyGangMemberEquipment(ns: NS) {
+    let cash = ns.getServerMoneyAvailable("home");
     const equipment = ns.gang
         .getEquipmentNames()
         .map((equipmentName) => ({ name: equipmentName, cost: ns.gang.getEquipmentCost(equipmentName) }))
+        .filter((e) => e.cost <= cash)
         .sort((a, b) => a.cost - b.cost);
+
     ns.gang
         .getMemberNames()
         .map((name) => ({

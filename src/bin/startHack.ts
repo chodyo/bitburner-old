@@ -108,33 +108,37 @@ function doHack(ns: NS, rootedServers: Target[]) {
 
     let previousTargetIsPrimed = true;
 
-    const targets = rootedServers
+    rootedServers = rootedServers
         .filter((target) => ns.getHackingLevel() >= ns.getServerRequiredHackingLevel(target.hostname))
-        .filter((target) => target.maxMoney > 0)
-        .filter((target) => target.hostname !== "home")
         .sort((a, b) => {
             // most servers have a similar setup - proportionally low or high max money, growth, and security
             // "fulcrumassets" has way too much security for comparatively little gain.
-            if (a.hostname === "fulcrumassets") {
-                return 1;
-            }
-            if (b.hostname === "fulcrumassets") {
-                return -1;
-            }
+            if (a.hostname === "fulcrumassets") return 1;
+            if (b.hostname === "fulcrumassets") return -1;
+
+            // put home first because that's the first server we want to be deploying grow/weaken to
+            if (a.hostname === "home") return -1;
+            if (b.hostname === "home") return 1;
 
             return a.maxMoney - b.maxMoney;
-        })
-        // .slice(0, 10)
+        });
+
+    const targets = rootedServers
+        .filter((target) => target.maxMoney > 0)
         .map((target) => {
-            // logger.trace("now", target.toString());
+            // home is only in this list so we can use it to run scripts - we don't want to actually hack it
+            if (target.hostname === "home") {
+                // logger.trace("now", target.toString());
+                return { hostname: target.hostname, primed: true, leftover: false };
+            }
 
             // shortcut to prevent trying to spin up worker threads for a machine later in the list
             // i want to laser focus as much work as possible on the machines in order because
             // once a machine is primed, it takes very little compute and rewards a lot of cash.
             // only work on a machine if i know that every other target before it has already been fully primed.
-            if (!previousTargetIsPrimed) {
-                return { hostname: target.hostname, primed: false, leftover: false };
-            }
+            // if (!previousTargetIsPrimed) {
+            //     return { hostname: target.hostname, primed: false, leftover: false };
+            // }
             // let later servers know that i am primed or not
             previousTargetIsPrimed = primedServers.get(target.hostname) || false;
 
@@ -270,6 +274,9 @@ function spinUpScriptWithThreads(
 ) {
     const logger = new Logger(ns);
 
+    // home only effects grow/weaken i believe
+    if (scriptname === "/bin/hack.js") rootedServers = rootedServers.filter((target) => target.hostname !== "home");
+
     const homeReserveRam =
         ns.getScriptRam("/bin/faction.js") +
         ns.getScriptRam("/bin/optimize.js") +
@@ -283,11 +290,19 @@ function spinUpScriptWithThreads(
         const serverMaxRam = ns.getServerMaxRam(server.hostname) - (server.hostname === "home" ? homeReserveRam : 0);
         const serverRamAvailable = serverMaxRam - ns.getServerUsedRam(server.hostname);
         const serverMaxThreads = Math.floor(serverRamAvailable / ramPerThread);
+
         if (serverMaxThreads <= 0) continue;
 
         const threads = Math.min(totalThreads, serverMaxThreads);
 
-        const pid = ns.exec(scriptname, server.hostname, threads, ...["--target", target.hostname]);
+        let tries = 3;
+        let pid = 0;
+        while (tries > 0 && pid === 0) {
+            // sometimes exec just fails for what looks like no reason
+            // maybe i'm trying to start it while the last start script is still working?
+            pid = ns.exec(scriptname, server.hostname, threads, ...["--target", target.hostname]);
+            tries -= 1;
+        }
 
         // out of ram?
         if (!pid) continue;

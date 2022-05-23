@@ -75,7 +75,7 @@ abstract class Factions {
 
         const alreadyHere = ns.getPlayer().city === this.value.city;
         const haveEnoughCash = ns.getServerMoneyAvailable("home") >= 200e3;
-        if (this.value.city && !alreadyHere && haveEnoughCash) ready = ns.travelToCity(this.value.city);
+        if (this.value.city && !alreadyHere && haveEnoughCash) ready = ns.singularity.travelToCity(this.value.city);
 
         if (this.value.corp && !workForCorp(ns, this.value.corpName || this.value.name, this.value.corp)) ready = false;
 
@@ -93,14 +93,14 @@ abstract class Factions {
         const rooted = gainRootAccess(ns, hostname);
         if (!highEnoughHacking || !rooted) return false;
 
-        const currentServer = ns.getCurrentServer();
+        const currentServer = ns.singularity.getCurrentServer();
         const connected = connect(ns, hostname);
         if (!connected) {
             throw new Error(`failed to connect to backdoor ${hostname}`);
         }
 
         logger.info("installing backdoor");
-        await ns.installBackdoor();
+        await ns.singularity.installBackdoor();
 
         logger.info("returning terminal to previous server");
         const returnedHome = connect(ns, currentServer);
@@ -230,7 +230,7 @@ class CriminalOrgs extends Factions {
             return false;
         }
 
-        ns.commitCrime("Homicide");
+        ns.singularity.commitCrime("Homicide");
 
         return false;
     }
@@ -271,7 +271,7 @@ class EndgameFactions extends Factions {
 
             if (firstLowStat) {
                 const gym = "Powerhouse Gym";
-                ns.gymWorkout(gym, firstLowStat.name);
+                ns.singularity.gymWorkout(gym, firstLowStat.name);
                 return false;
             }
 
@@ -330,7 +330,7 @@ export function getEnoughRep(ns: NS) {
 
     // highest rep requirement of all augs for all factions i've already joined
     const augs = unownedUninstalledAugmentsFromFactions(ns, ...ns.getPlayer().factions)
-        .filter((aug) => ns.getFactionRep(aug.faction) < aug.repreq)
+        .filter((aug) => ns.singularity.getFactionRep(aug.faction) < aug.repreq)
         .sort((a, b) => b.repreq - a.repreq)
         .filter((aug) => aug.faction !== "Bladeburners"); // not sure how to deal with this yet
 
@@ -343,24 +343,27 @@ export function getEnoughRep(ns: NS) {
     logger.info("chosen faction", faction, repreq, "all faction augs", augs);
 
     const earned = ns.getPlayer().workRepGained;
-    const total = earned + ns.getFactionRep(faction);
+    const total = earned + ns.singularity.getFactionRep(faction);
     const remainder = repreq - total;
 
-    const donosUnlocked = ns.getFactionFavor(faction) >= ns.getFavorToDonate();
+    const donosUnlocked = ns.singularity.getFactionFavor(faction) >= ns.getFavorToDonate();
 
     if (remainder && donosUnlocked) {
         // https://github.com/danielyxie/bitburner/blob/f5386acc17de63b66530fc6aad8f911c451663f6/src/Faction/formulas/donation.ts#L5
         // https://github.com/danielyxie/bitburner/blob/f5386acc17de63b66530fc6aad8f911c451663f6/src/Constants.ts#L141
         const donoAmount = Math.ceil((remainder * 1e6) / ns.getPlayer().faction_rep_mult);
         const enoughCashToReachRepGoal = ns.getServerMoneyAvailable("home") >= donoAmount;
-        ns.donateToFaction(faction, enoughCashToReachRepGoal ? donoAmount : ns.getServerMoneyAvailable("home") / 3);
+        ns.singularity.donateToFaction(
+            faction,
+            enoughCashToReachRepGoal ? donoAmount : ns.getServerMoneyAvailable("home") / 3
+        );
     }
 
     const totalFavor = 1 + Math.log((total + 25000) / 25500) / Math.log(1.02);
     const canUnlockDonos = totalFavor >= ns.getFavorToDonate();
     if (!donosUnlocked && canUnlockDonos) {
         // buy any available augs
-        ns.stopAction();
+        ns.singularity.stopAction();
         return true;
     }
 
@@ -378,7 +381,7 @@ export function buyAugs(ns: NS) {
     const logger = new Logger(ns);
 
     const includePurchased = true;
-    const playerAugs = ns.getOwnedAugmentations(includePurchased);
+    const playerAugs = ns.singularity.getOwnedAugmentations(includePurchased);
 
     // figure out what needs buying
     const augs = unownedUninstalledAugmentsFromFactions(ns, ...ns.getPlayer().factions)
@@ -386,7 +389,7 @@ export function buyAugs(ns: NS) {
         .filter((aug) => aug.faction !== "Bladeburners")
         // e.g. if the program wants to reset to unlock donations,
         // it should still install whatever augs it can get its filthy digital hands on
-        .filter((aug) => aug.repreq <= ns.getFactionRep(aug.faction))
+        .filter((aug) => aug.repreq <= ns.singularity.getFactionRep(aug.faction))
         .sort((a, b) => {
             if (a.prereqs.includes(b.name)) return 1;
             if (b.prereqs.includes(a.name)) return -1;
@@ -399,12 +402,16 @@ export function buyAugs(ns: NS) {
     }
 
     // buy
-    while (augs.length > 0 && augs[0] && ns.getAugmentationPrice(augs[0].name) <= ns.getServerMoneyAvailable("home")) {
+    while (
+        augs.length > 0 &&
+        augs[0] &&
+        ns.singularity.getAugmentationPrice(augs[0].name) <= ns.getServerMoneyAvailable("home")
+    ) {
         const aug = augs.shift();
         if (aug === undefined) {
             throw new Error("tried to buy an augmentation but wasn't able to pop off the front of the list");
         }
-        if (!ns.purchaseAugmentation(aug.faction, aug.name)) {
+        if (!ns.singularity.purchaseAugmentation(aug.faction, aug.name)) {
             throw new Error(
                 `tried to buy an aug but failed ${aug.faction} ${aug.name} ${aug.price} ${ns.getServerMoneyAvailable(
                     "home"
@@ -429,15 +436,15 @@ export function buyBladeburnerAugs(ns: NS) {
 
     // once the price mult gets too high, i don't think it's worth it to wait too long to buy BB augs
     // count chosen at random, should probably be adjusted
-    const allAugs = ns.getOwnedAugmentations(true).length;
-    const installedAugs = ns.getOwnedAugmentations(false).length;
+    const allAugs = ns.singularity.getOwnedAugmentations(true).length;
+    const installedAugs = ns.singularity.getOwnedAugmentations(false).length;
     const queuedAugsCount = allAugs - installedAugs;
     if (queuedAugsCount > 12) {
         return true;
     }
 
     const augs = unownedUninstalledAugmentsFromFactions(ns, "Bladeburners")
-        .filter((aug) => aug.repreq <= ns.getFactionRep(aug.faction))
+        .filter((aug) => aug.repreq <= ns.singularity.getFactionRep(aug.faction))
         .sort((a, b) => {
             // even though this aug is super good, it's super expensive
             if (a.name === "The Blade's Simulacrum") return 1;
@@ -455,12 +462,16 @@ export function buyBladeburnerAugs(ns: NS) {
         return true;
     }
 
-    while (augs.length > 0 && augs[0] && ns.getAugmentationPrice(augs[0].name) <= ns.getServerMoneyAvailable("home")) {
+    while (
+        augs.length > 0 &&
+        augs[0] &&
+        ns.singularity.getAugmentationPrice(augs[0].name) <= ns.getServerMoneyAvailable("home")
+    ) {
         const aug = augs.shift();
         if (aug === undefined) {
             throw new Error("tried to buy an augmentation but wasn't able to pop off the front of the list");
         }
-        if (!ns.purchaseAugmentation(aug.faction, aug.name)) {
+        if (!ns.singularity.purchaseAugmentation(aug.faction, aug.name)) {
             throw new Error(
                 `tried to buy an aug but failed ${aug.faction} ${aug.name} ${aug.price} ${ns.getServerMoneyAvailable(
                     "home"
@@ -477,16 +488,23 @@ export function buyBladeburnerAugs(ns: NS) {
 export function buyNeuroFluxGovernor(ns: NS) {
     const logger = new Logger(ns);
 
-    if (ns.getPlayer().factions.length === 0) {
+    const factions = ns
+        .getPlayer()
+        .factions.filter((faction) =>
+            ns.singularity.getAugmentationsFromFaction(faction).includes(infinitelyUpgradableAug)
+        );
+
+    if (factions.length === 0) {
         throw new Error("can't buy neuroflux without a faction");
     }
-    const faction = ns.getPlayer().factions[0];
+
+    const faction = factions.sort((a, b) => ns.singularity.getFactionRep(b) - ns.singularity.getFactionRep(a))[0];
 
     while (
-        ns.getServerMoneyAvailable("home") >= ns.getAugmentationPrice(infinitelyUpgradableAug) &&
-        ns.getFactionRep(faction) >= ns.getAugmentationRepReq(infinitelyUpgradableAug)
+        ns.getServerMoneyAvailable("home") >= ns.singularity.getAugmentationPrice(infinitelyUpgradableAug) &&
+        ns.singularity.getFactionRep(faction) >= ns.singularity.getAugmentationRepReq(infinitelyUpgradableAug)
     ) {
-        if (!ns.purchaseAugmentation(faction, infinitelyUpgradableAug)) {
+        if (!ns.singularity.purchaseAugmentation(faction, infinitelyUpgradableAug)) {
             throw new Error(`tried to buy an aug but failed ${faction} ${infinitelyUpgradableAug}`);
         }
         logger.info(`bought ${faction} ${infinitelyUpgradableAug}`);
@@ -497,23 +515,43 @@ export function buyNeuroFluxGovernor(ns: NS) {
 export function installAugs(ns: NS) {
     // seems to be a bug where the game crashes if you're working
     // https://github.com/danielyxie/bitburner/issues/2902
-    ns.stopAction();
-    ns.installAugmentations("/bin/optimize.js");
-    ns.softReset("/bin/optimize.js"); // if i have no augs
+    ns.singularity.stopAction();
+
+    installSleeveAugs(ns);
+
+    ns.singularity.installAugmentations("/bin/optimize.js");
+
+    // if i have no augs
+    ns.singularity.softReset("/bin/optimize.js");
+}
+
+function installSleeveAugs(ns: NS) {
+    Array(ns.sleeve.getNumSleeves())
+        .fill(0)
+        .flatMap((_, i) => {
+            return ns.sleeve.getSleevePurchasableAugs(i).map((aug) => ({
+                sleeveNumber: i,
+                name: aug.name,
+                cost: aug.cost,
+            }));
+        })
+        .filter((aug) => ns.sleeve.getSleeveStats(aug.sleeveNumber).shock === 0)
+        .sort((a, b) => a.cost - b.cost)
+        .forEach((aug) => ns.sleeve.purchaseSleeveAug(aug.sleeveNumber, aug.name));
 }
 
 function unownedUninstalledAugmentsFromFactions(ns: NS, ...factions: string[]) {
     const purchasedAndInstalled = true;
-    const playerAugs = ns.getOwnedAugmentations(purchasedAndInstalled);
+    const playerAugs = ns.singularity.getOwnedAugmentations(purchasedAndInstalled);
 
     const leftoverAugs = factions
         .flatMap((faction) =>
-            ns.getAugmentationsFromFaction(faction).map((aug) => ({
+            ns.singularity.getAugmentationsFromFaction(faction).map((aug) => ({
                 faction: faction,
                 name: aug,
-                repreq: ns.getAugmentationRepReq(aug),
-                prereqs: ns.getAugmentationPrereq(aug),
-                price: ns.getAugmentationPrice(aug),
+                repreq: ns.singularity.getAugmentationRepReq(aug),
+                prereqs: ns.singularity.getAugmentationPrereq(aug),
+                price: ns.singularity.getAugmentationPrice(aug),
             }))
         )
         .filter((aug) => !playerAugs.includes(aug.name))
@@ -545,26 +583,26 @@ async function induceFactionInvite(ns: NS) {
     logger.info(`inducing faction invite with ${f}`);
     await f.induceInvite(ns);
 
-    if (ns.checkFactionInvitations().includes(f.name)) {
-        return ns.joinFaction(f.name);
+    if (ns.singularity.checkFactionInvitations().includes(f.name)) {
+        return ns.singularity.joinFaction(f.name);
     }
 }
 
 function hackForFaction(ns: NS, factionName: string, repThreshold: number) {
-    const current = ns.getFactionRep(factionName);
+    const current = ns.singularity.getFactionRep(factionName);
 
     const earned = ns.getPlayer().workRepGained;
     if (current + earned >= repThreshold) {
-        ns.stopAction();
+        ns.singularity.stopAction();
         return true;
     }
 
     const currentFactionName = ns.getPlayer().currentWorkFactionName;
     if (!currentFactionName || currentFactionName !== factionName) {
-        ["hacking", "field work", "security"].some((workType) => ns.workForFaction(factionName, workType));
+        ["hacking", "field work", "security"].some((workType) => ns.singularity.workForFaction(factionName, workType));
     }
 
-    return ns.getFactionRep(factionName) >= repThreshold;
+    return ns.singularity.getFactionRep(factionName) >= repThreshold;
 }
 
 async function workForCorp(ns: NS, corpName: string, repThreshold: number) {
@@ -573,24 +611,24 @@ async function workForCorp(ns: NS, corpName: string, repThreshold: number) {
     const player = ns.getPlayer();
     // logger.trace("player", player);
 
-    const current = ns.getCompanyRep(corpName);
+    const current = ns.singularity.getCompanyRep(corpName);
     const earned = player.workRepGained;
     const backdoored = await isCorpBackdoored(ns, corpName);
     const wouldReceive = backdoored ? (earned * 3) / 4 : earned / 2;
 
     if (current + wouldReceive >= repThreshold) {
-        ns.stopAction();
+        ns.singularity.stopAction();
         return true;
     }
 
     // todo: sometimes i might need to stop working to accrue rep so i can make the next promotion
     // if (player.companyName !== corpName) {
-    const applied = ns.applyToCompany(corpName, "Software");
+    const applied = ns.singularity.applyToCompany(corpName, "Software");
     logger.trace("applied to", corpName, applied);
     // }
 
     if (!player.workType || player.workType !== "Working for Company") {
-        const isWorking = ns.workForCompany(corpName);
+        const isWorking = ns.singularity.workForCompany(corpName);
         logger.trace("working for", corpName, isWorking);
         return false;
     }

@@ -11,7 +11,7 @@ export async function main(ns: NS) {
 
     const scripts = [
         { name: "/bin/startHack.js", active: true, runOnce: true },
-        { name: "/bin/redpill.js", active: true, runFast: false },
+        { name: "/bin/redpill.js", active: false, runFast: false },
         { name: "/bin/contracts.js", active: true },
         { name: "/bin/faction.js", active: true, args: ["--state", "joinFaction"] },
         { name: "/bin/home.js", active: true },

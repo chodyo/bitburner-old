@@ -254,17 +254,8 @@ function runBladeburnerActions(ns: NS) {
     //     return false;
     // }
 
-    // don't do any black op work until we're at least rank 20k
-    const blackOpRankThreshold = 20000;
-    if (ns.bladeburner.getRank() >= blackOpRankThreshold) {
-        const nextBlackOp = BlackOps.next(ns);
-        if (!nextBlackOp) {
-            ns.alert(
-                "cody you either need to add the next black op or code up what happens when we beat all the black ops"
-            );
-            return;
-        }
-
+    const nextBlackOp = BlackOps.next(ns);
+    if (nextBlackOp) {
         nextBlackOp.maxTeam(ns);
 
         // if the next black op is 100% success, might as well work on it
@@ -273,22 +264,18 @@ function runBladeburnerActions(ns: NS) {
             logger.trace("started black op", startedBlackOp);
             return false;
         }
-
-        // // if there's a black op but it's not 100% success, we should do work to make it 100%
-        // if (ns.bladeburner.getCityChaos(ns.bladeburner.getCity()) > 1000) {
-        //     const startedDiplomacy = General.Diplomacy.start(ns);
-        //     logger.trace("started diplomacy", startedDiplomacy);
-        //     return false;
-        // }
-
-        // const startedRecruiting = General.Recruitment.start(ns);
-        // logger.trace("started recruiting", startedRecruiting);
-        // return false;
     }
 
     // 70% low end chosen at random
     const low = Contracts.Tracking.low(ns);
     if (low < 70) {
+        // chosen at random
+        if (cityChaoses[0].chaos > 1e6) {
+            const startedDiplomacy = General.Diplomacy.start(ns);
+            logger.trace("started diplomacy", startedDiplomacy);
+            return false;
+        }
+
         const high = Contracts.Tracking.high(ns);
         if (high - low > 10) {
             const startedAnalysis = General.Analysis.start(ns);
